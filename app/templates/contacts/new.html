@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}New contact - Python CRM{% endblock %}
+
+{% block content %}
+<h1>New contact</h1>
+{% if errors %}
+<ul>
+  {% for err in errors %}
+  <li>{{ err }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="/contacts">
+  <p>
+    <label for="full_name">Full name (required)</label>
+    <input type="text" id="full_name" name="full_name" value="{{ form_full_name or '' }}" required />
+  </p>
+  <p>
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" value="{{ form_email or '' }}" />
+  </p>
+  <p>
+    <label for="phone">Phone</label>
+    <input type="text" id="phone" name="phone" value="{{ form_phone or '' }}" />
+  </p>
+  <p>
+    <label for="company">Company</label>
+    <input type="text" id="company" name="company" value="{{ form_company or '' }}" />
+  </p>
+  <p>
+    <button type="submit">Create</button>
+    <a href="/contacts">Cancel</a>
+  </p>
+</form>
+{% endblock %}

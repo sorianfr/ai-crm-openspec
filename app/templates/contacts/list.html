@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Contacts - Python CRM{% endblock %}
+
+{% block content %}
+<h1>Contacts</h1>
+<p><a href="/contacts/new">New contact</a></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Phone</th>
+      <th>Company</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for contact in contacts %}
+    <tr id="contact-{{ contact.id }}">
+      <td>{{ contact.full_name }}</td>
+      <td>{{ contact.email or "" }}</td>
+      <td>{{ contact.phone or "" }}</td>
+      <td>{{ contact.company or "" }}</td>
+      <td><a href="/contacts/{{ contact.id }}/edit">Edit</a></td>
+      <td>
+        <button type="button"
+                hx-post="/contacts/{{ contact.id }}/delete"
+                hx-target="#contact-{{ contact.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete this contact?">Delete</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No contacts yet. <a href="/contacts/new">Add one</a>.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

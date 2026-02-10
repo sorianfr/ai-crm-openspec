@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import health, home
+from app.routes import health, home, contacts
 
 app = FastAPI(
     title="Python CRM",
@@ -20,6 +20,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # Routes
 app.include_router(health.router, tags=["health"])
 app.include_router(home.router, tags=["home"])
+app.include_router(contacts.router, tags=["contacts"])
 
 
 @app.on_event("startup")
