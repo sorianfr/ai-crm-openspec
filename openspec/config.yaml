@@ -1,0 +1,27 @@
+schema: spec-driven
+
+schema: spec-driven
+
+project:
+  name: AI CRM (Python)
+  description: >
+    Basic CRM web application built using Spec Driven Development.
+    Stack optimized for Python-first developer using OpenSpec + Cursor.
+
+stack:
+  backend: FastAPI
+  language: Python 3.10
+  database: SQLite (initially)
+  orm: SQLAlchemy 2.0
+  migrations: Alembic
+  validation: Pydantic
+  frontend: Jinja2 + HTMX
+  testing: pytest
+
+principles:
+  - Keep architecture simple (single service first)
+  - REST endpoints are the source of truth
+  - Server-rendered UI with HTMX (no SPA in MVP)
+  - Small incremental changes; each change must run end-to-end
+
+
