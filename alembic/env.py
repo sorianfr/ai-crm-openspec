@@ -14,7 +14,7 @@ from alembic import context
 
 from app.core.config import DATABASE_URL
 from app.db.base import Base
-from app.models import Contact  # noqa: F401 - ensure Contact table in metadata for autogenerate
+from app.models import Contact, Note  # noqa: F401 - ensure tables in metadata for autogenerate
 
 config = context.config
 if config.config_file_name is not None:

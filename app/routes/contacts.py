@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.core.templates import templates
 from app.db.session import get_db
-from app.models import Contact
+from app.models import Contact, Note
 from app.schemas.contact import ContactFormSchema
+from app.schemas.note import NoteFormSchema
 
 router = APIRouter()
 
@@ -95,11 +96,17 @@ def edit_contact(
 ) -> HTMLResponse:
     contact = _get_contact_or_404(db, contact_id)
     if contact is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Contact not found")
+    notes = (
+        db.execute(
+            select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
     return templates.TemplateResponse(
         "contacts/edit.html",
-        {"request": request, "contact": contact, "errors": []},
+        {"request": request, "contact": contact, "notes": notes, "errors": []},
     )
 
 
@@ -115,7 +122,6 @@ def update_contact(
 ) -> Response:
     contact = _get_contact_or_404(db, contact_id)
     if contact is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Contact not found")
     try:
         data = ContactFormSchema(
@@ -126,11 +132,19 @@ def update_contact(
         )
     except ValidationError as e:
         errors = [err["msg"] for err in e.errors()]
+        notes = (
+            db.execute(
+                select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+            )
+            .scalars()
+            .all()
+        )
         return templates.TemplateResponse(
             "contacts/edit.html",
             {
                 "request": request,
                 "contact": contact,
+                "notes": notes,
                 "errors": errors,
                 "form_full_name": full_name,
                 "form_email": email or "",
@@ -149,6 +163,56 @@ def update_contact(
     return RedirectResponse(url="/contacts", status_code=303)
 
 
+@router.post("/contacts/{contact_id:int}/notes")
+def create_note(
+    request: Request,
+    contact_id: int,
+    db: Session = Depends(get_db),
+    content: str = Form(""),
+) -> Response:
+    contact = _get_contact_or_404(db, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    try:
+        data = NoteFormSchema(content=content)
+    except ValidationError as e:
+        note_errors = [err["msg"] for err in e.errors()]
+        fragment = templates.TemplateResponse(
+            "contacts/_add_note_form_container.html",
+            {
+                "request": request,
+                "contact": contact,
+                "note_errors": note_errors,
+                "form_content": content,
+            },
+        )
+        fragment.headers["HX-Retarget"] = "#add-note-form-container"
+        fragment.headers["HX-Reswap"] = "outerHTML"
+        return fragment
+    note = Note(contact_id=contact_id, content=data.content)
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    fragment = templates.TemplateResponse(
+        "contacts/_note_row.html",
+        {"request": request, "note": note},
+    )
+    return fragment
+
+
+@router.post("/notes/{note_id:int}/delete")
+def delete_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    note = db.get(Note, note_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    db.delete(note)
+    db.commit()
+    return HTMLResponse(content="", status_code=200)
+
+
 @router.post("/contacts/{contact_id:int}/delete")
 def delete_contact(
     contact_id: int,
@@ -156,7 +220,6 @@ def delete_contact(
 ):
     contact = _get_contact_or_404(db, contact_id)
     if contact is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Contact not found")
     db.delete(contact)
     db.commit()

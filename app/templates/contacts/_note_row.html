@@ -1,0 +1,10 @@
+<div id="note-{{ note.id }}" class="note-row">
+  <span class="note-content">{{ note.content }}</span>
+  <span class="note-created">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+  <button type="button"
+          hx-post="/notes/{{ note.id }}/delete"
+          hx-target="#note-{{ note.id }}"
+          hx-swap="outerHTML">
+    Delete
+  </button>
+</div>

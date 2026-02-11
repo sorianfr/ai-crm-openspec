@@ -33,4 +33,14 @@
     <a href="/contacts">Cancel</a>
   </p>
 </form>
+
+<section class="notes">
+  <h2>Notes</h2>
+  <div id="contact-notes-list">
+    {% for note in notes %}
+    {% include "contacts/_note_row.html" %}
+    {% endfor %}
+  </div>
+  {% include "contacts/_add_note_form_container.html" %}
+</section>
 {% endblock %}

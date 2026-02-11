@@ -1,0 +1,20 @@
+<div id="add-note-form-container">
+  {% if note_errors|default([]) %}
+  <ul class="note-errors">
+    {% for err in note_errors %}
+    <li>{{ err }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form hx-post="/contacts/{{ contact.id }}/notes"
+        hx-target="#contact-notes-list"
+        hx-swap="beforeend">
+    <p>
+      <label for="note_content">Note</label>
+      <textarea id="note_content" name="content" rows="3">{{ form_content|default('', true) }}</textarea>
+    </p>
+    <p>
+      <button type="submit">Add note</button>
+    </p>
+  </form>
+</div>
