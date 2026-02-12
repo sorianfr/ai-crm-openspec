@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}New company - Python CRM{% endblock %}
+
+{% block content %}
+<h1>New company</h1>
+{% if errors %}
+<ul>
+  {% for err in errors %}
+  <li>{{ err }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="/companies">
+  <p>
+    <label for="name">Name (required)</label>
+    <input type="text" id="name" name="name" value="{{ form_name or '' }}" required />
+  </p>
+  <p>
+    <button type="submit">Create</button>
+    <a href="/companies">Cancel</a>
+  </p>
+</form>
+{% endblock %}

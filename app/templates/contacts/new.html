@@ -29,6 +29,17 @@
     <input type="text" id="company" name="company" value="{{ form_company or '' }}" />
   </p>
   <p>
+    <label for="company_id">Existing company (optional)</label>
+    <select id="company_id" name="company_id">
+      <option value="">-- None --</option>
+      {% for company_option in companies %}
+      <option value="{{ company_option.id }}" {% if (form_company_id | default('', true)) == (company_option.id | string) %}selected{% endif %}>
+        {{ company_option.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
     <button type="submit">Create</button>
     <a href="/contacts">Cancel</a>
   </p>
