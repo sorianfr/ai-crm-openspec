@@ -2,10 +2,10 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.templates import templates
@@ -24,17 +24,47 @@ def _get_contact_or_404(db: Session, contact_id: int) -> Contact | None:
 @router.get("/contacts", response_class=HTMLResponse)
 def list_contacts(
     request: Request,
+    q: str = Query(default=""),
+    has_email: bool = Query(default=False),
+    has_phone: bool = Query(default=False),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    stmt = select(Contact)
+
+    q = q.strip()
+    if q:
+        search_value = f"%{q}%"
+        stmt = stmt.where(
+            or_(
+                Contact.full_name.ilike(search_value),
+                Contact.email.ilike(search_value),
+                Contact.company.ilike(search_value),
+            )
+        )
+
+    if has_email:
+        stmt = stmt.where(Contact.email.is_not(None), Contact.email != "")
+
+    if has_phone:
+        stmt = stmt.where(Contact.phone.is_not(None), Contact.phone != "")
+
     contacts = (
-        db.execute(select(Contact).order_by(Contact.updated_at.desc()))
+        db.execute(stmt.order_by(Contact.updated_at.desc()))
         .scalars()
         .all()
     )
-    return templates.TemplateResponse(
-        "contacts/list.html",
-        {"request": request, "contacts": contacts},
-    )
+    context = {
+        "request": request,
+        "contacts": contacts,
+        "q": q,
+        "has_email": has_email,
+        "has_phone": has_phone,
+    }
+
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse("contacts/_contacts_table.html", context)
+
+    return templates.TemplateResponse("contacts/list.html", context)
 
 
 @router.get("/contacts/new", response_class=HTMLResponse)

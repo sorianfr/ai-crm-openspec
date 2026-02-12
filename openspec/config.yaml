@@ -1,7 +1,5 @@
 schema: spec-driven
 
-schema: spec-driven
-
 project:
   name: AI CRM (Python)
   description: >

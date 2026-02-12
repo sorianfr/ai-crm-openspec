@@ -5,36 +5,32 @@
 {% block content %}
 <h1>Contacts</h1>
 <p><a href="/contacts/new">New contact</a></p>
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Email</th>
-      <th>Phone</th>
-      <th>Company</th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for contact in contacts %}
-    <tr id="contact-{{ contact.id }}">
-      <td>{{ contact.full_name }}</td>
-      <td>{{ contact.email or "" }}</td>
-      <td>{{ contact.phone or "" }}</td>
-      <td>{{ contact.company or "" }}</td>
-      <td><a href="/contacts/{{ contact.id }}/edit">Edit</a></td>
-      <td>
-        <button type="button"
-                hx-post="/contacts/{{ contact.id }}/delete"
-                hx-target="#contact-{{ contact.id }}"
-                hx-swap="outerHTML"
-                hx-confirm="Delete this contact?">Delete</button>
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="6">No contacts yet. <a href="/contacts/new">Add one</a>.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<form method="get"
+      action="/contacts"
+      hx-get="/contacts"
+      hx-target="#contacts-results"
+      hx-swap="innerHTML">
+  <p>
+    <label for="q">Search</label>
+    <input type="text" id="q" name="q" value="{{ q }}" placeholder="Name, email, or company" />
+  </p>
+  <p>
+    <label>
+      <input type="checkbox" name="has_email" value="true" {% if has_email %}checked{% endif %} />
+      Has email
+    </label>
+    <label>
+      <input type="checkbox" name="has_phone" value="true" {% if has_phone %}checked{% endif %} />
+      Has phone
+    </label>
+  </p>
+  <p>
+    <button type="submit">Apply filters</button>
+    <a href="/contacts">Clear</a>
+  </p>
+</form>
+
+<div id="contacts-results">
+  {% include "contacts/_contacts_table.html" %}
+</div>
 {% endblock %}
