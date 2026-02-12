@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.templates import templates
 from app.db.session import get_db
-from app.models import Contact, Note
+from app.models import Company, Contact, Note
 from app.schemas.contact import ContactFormSchema
 from app.schemas.note import NoteFormSchema
 
@@ -19,6 +19,27 @@ router = APIRouter()
 
 def _get_contact_or_404(db: Session, contact_id: int) -> Contact | None:
     return db.get(Contact, contact_id)
+
+
+def _list_companies(db: Session) -> list[Company]:
+    return db.execute(select(Company).order_by(Company.name.asc())).scalars().all()
+
+
+def _resolve_company_id(
+    db: Session,
+    company_id_raw: str | None,
+) -> tuple[int | None, str | None]:
+    if company_id_raw is None or company_id_raw.strip() == "":
+        return None, None
+    try:
+        company_id = int(company_id_raw)
+    except ValueError:
+        return None, "Selected company is invalid"
+
+    company = db.get(Company, company_id)
+    if company is None:
+        return None, "Selected company is invalid"
+    return company_id, None
 
 
 @router.get("/contacts", response_class=HTMLResponse)
@@ -68,10 +89,18 @@ def list_contacts(
 
 
 @router.get("/contacts/new", response_class=HTMLResponse)
-def new_contact(request: Request) -> HTMLResponse:
+def new_contact(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
     return templates.TemplateResponse(
         "contacts/new.html",
-        {"request": request, "contact": None, "errors": []},
+        {
+            "request": request,
+            "contact": None,
+            "errors": [],
+            "companies": _list_companies(db),
+        },
     )
 
 
@@ -83,6 +112,7 @@ def create_contact(
     email: str | None = Form(None),
     phone: str | None = Form(None),
     company: str | None = Form(None),
+    company_id: str | None = Form(None),
 ) -> Response:
     try:
         data = ContactFormSchema(
@@ -103,6 +133,25 @@ def create_contact(
                 "form_email": email or "",
                 "form_phone": phone or "",
                 "form_company": company or "",
+                "form_company_id": company_id or "",
+                "companies": _list_companies(db),
+            },
+            status_code=200,
+        )
+    selected_company_id, company_id_error = _resolve_company_id(db, company_id)
+    if company_id_error:
+        return templates.TemplateResponse(
+            "contacts/new.html",
+            {
+                "request": request,
+                "contact": None,
+                "errors": [company_id_error],
+                "form_full_name": full_name,
+                "form_email": email or "",
+                "form_phone": phone or "",
+                "form_company": company or "",
+                "form_company_id": company_id or "",
+                "companies": _list_companies(db),
             },
             status_code=200,
         )
@@ -111,6 +160,7 @@ def create_contact(
         email=data.email,
         phone=data.phone,
         company=data.company,
+        company_id=selected_company_id,
     )
     db.add(contact)
     db.commit()
@@ -136,7 +186,13 @@ def edit_contact(
     )
     return templates.TemplateResponse(
         "contacts/edit.html",
-        {"request": request, "contact": contact, "notes": notes, "errors": []},
+        {
+            "request": request,
+            "contact": contact,
+            "notes": notes,
+            "errors": [],
+            "companies": _list_companies(db),
+        },
     )
 
 
@@ -149,6 +205,7 @@ def update_contact(
     email: str | None = Form(None),
     phone: str | None = Form(None),
     company: str | None = Form(None),
+    company_id: str | None = Form(None),
 ) -> Response:
     contact = _get_contact_or_404(db, contact_id)
     if contact is None:
@@ -180,6 +237,33 @@ def update_contact(
                 "form_email": email or "",
                 "form_phone": phone or "",
                 "form_company": company or "",
+                "form_company_id": company_id or "",
+                "companies": _list_companies(db),
+            },
+            status_code=200,
+        )
+    selected_company_id, company_id_error = _resolve_company_id(db, company_id)
+    if company_id_error:
+        notes = (
+            db.execute(
+                select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+            )
+            .scalars()
+            .all()
+        )
+        return templates.TemplateResponse(
+            "contacts/edit.html",
+            {
+                "request": request,
+                "contact": contact,
+                "notes": notes,
+                "errors": [company_id_error],
+                "form_full_name": full_name,
+                "form_email": email or "",
+                "form_phone": phone or "",
+                "form_company": company or "",
+                "form_company_id": company_id or "",
+                "companies": _list_companies(db),
             },
             status_code=200,
         )
@@ -187,6 +271,7 @@ def update_contact(
     contact.email = data.email
     contact.phone = data.phone
     contact.company = data.company
+    contact.company_id = selected_company_id
     contact.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(contact)
