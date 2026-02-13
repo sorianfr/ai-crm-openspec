@@ -53,10 +53,10 @@ The system SHALL provide a GET route at `/contacts` that returns a server-render
 - **THEN** the route SHALL return only the contacts list/table fragment
 - **AND** the fragment SHALL be suitable for swap into a stable container (e.g. `#contacts-results`)
 
-#### Scenario: List company display remains legacy text
-- **WHEN** the contacts list page is rendered for a contact that has both `company` text and `company_id`
-- **THEN** the company value shown in the list SHALL come from the contact's `company` text field
-- **AND** this change SHALL NOT require list display to switch to company name from `company_id`
+#### Scenario: List company display uses linked name with legacy fallback
+- **WHEN** the contacts list page is rendered for a contact
+- **THEN** the company value shown in the list SHALL be the linked Company's name when the contact has `company_id` set and the linked Company exists
+- **AND** when the contact has no `company_id` or the linked Company does not exist, the company value shown SHALL be the contact's legacy `company` text (or empty if none)
 
 ### Requirement: Create contact routes
 
