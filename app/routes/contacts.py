@@ -42,6 +42,27 @@ def _resolve_company_id(
     return company_id, None
 
 
+def _resolve_or_create_company(
+    db: Session,
+    name: str | None,
+) -> tuple[Company | None, str | None]:
+    """Resolve company by name (case-insensitive) or create. Returns (Company, None) or (None, error)."""
+    normalized = (name or "").strip()
+    if not normalized:
+        return None, "Company name is required"
+    existing = (
+        db.execute(select(Company).where(Company.name.ilike(normalized)).limit(1))
+        .scalars()
+        .first()
+    )
+    if existing is not None:
+        return existing, None
+    company = Company(name=normalized)
+    db.add(company)
+    db.flush()
+    return company, None
+
+
 @router.get("/contacts", response_class=HTMLResponse)
 def list_contacts(
     request: Request,
@@ -138,28 +159,54 @@ def create_contact(
             },
             status_code=200,
         )
-    selected_company_id, company_id_error = _resolve_company_id(db, company_id)
-    if company_id_error:
-        return templates.TemplateResponse(
-            "contacts/new.html",
-            {
-                "request": request,
-                "contact": None,
-                "errors": [company_id_error],
-                "form_full_name": full_name,
-                "form_email": email or "",
-                "form_phone": phone or "",
-                "form_company": company or "",
-                "form_company_id": company_id or "",
-                "companies": _list_companies(db),
-            },
-            status_code=200,
-        )
+    company_text = (company or "").strip()
+    if company_text:
+        resolved_company, resolve_error = _resolve_or_create_company(db, company_text)
+        if resolve_error:
+            return templates.TemplateResponse(
+                "contacts/new.html",
+                {
+                    "request": request,
+                    "contact": None,
+                    "errors": [resolve_error],
+                    "form_full_name": full_name,
+                    "form_email": email or "",
+                    "form_phone": phone or "",
+                    "form_company": company or "",
+                    "form_company_id": company_id or "",
+                    "companies": _list_companies(db),
+                },
+                status_code=200,
+            )
+        selected_company_id = resolved_company.id
+        company_display_name = resolved_company.name
+    else:
+        selected_company_id, company_id_error = _resolve_company_id(db, company_id)
+        if company_id_error:
+            return templates.TemplateResponse(
+                "contacts/new.html",
+                {
+                    "request": request,
+                    "contact": None,
+                    "errors": [company_id_error],
+                    "form_full_name": full_name,
+                    "form_email": email or "",
+                    "form_phone": phone or "",
+                    "form_company": company or "",
+                    "form_company_id": company_id or "",
+                    "companies": _list_companies(db),
+                },
+                status_code=200,
+            )
+        company_display_name = None
+        if selected_company_id is not None:
+            c = db.get(Company, selected_company_id)
+            company_display_name = c.name if c else None
     contact = Contact(
         full_name=data.full_name,
         email=data.email,
         phone=data.phone,
-        company=data.company,
+        company=company_display_name if company_display_name is not None else data.company,
         company_id=selected_company_id,
     )
     db.add(contact)
@@ -250,35 +297,69 @@ def update_contact(
             },
             status_code=200,
         )
-    selected_company_id, company_id_error = _resolve_company_id(db, company_id)
-    if company_id_error:
-        notes = (
-            db.execute(
-                select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+    company_text = (company or "").strip()
+    if company_text:
+        resolved_company, resolve_error = _resolve_or_create_company(db, company_text)
+        if resolve_error:
+            notes = (
+                db.execute(
+                    select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+                )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        return templates.TemplateResponse(
-            "contacts/edit.html",
-            {
-                "request": request,
-                "contact": contact,
-                "notes": notes,
-                "errors": [company_id_error],
-                "form_full_name": full_name,
-                "form_email": email or "",
-                "form_phone": phone or "",
-                "form_company": company or "",
-                "form_company_id": company_id or "",
-                "companies": _list_companies(db),
-            },
-            status_code=200,
-        )
+            return templates.TemplateResponse(
+                "contacts/edit.html",
+                {
+                    "request": request,
+                    "contact": contact,
+                    "notes": notes,
+                    "errors": [resolve_error],
+                    "form_full_name": full_name,
+                    "form_email": email or "",
+                    "form_phone": phone or "",
+                    "form_company": company or "",
+                    "form_company_id": company_id or "",
+                    "companies": _list_companies(db),
+                },
+                status_code=200,
+            )
+        selected_company_id = resolved_company.id
+        company_display_name = resolved_company.name
+    else:
+        selected_company_id, company_id_error = _resolve_company_id(db, company_id)
+        if company_id_error:
+            notes = (
+                db.execute(
+                    select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+                )
+                .scalars()
+                .all()
+            )
+            return templates.TemplateResponse(
+                "contacts/edit.html",
+                {
+                    "request": request,
+                    "contact": contact,
+                    "notes": notes,
+                    "errors": [company_id_error],
+                    "form_full_name": full_name,
+                    "form_email": email or "",
+                    "form_phone": phone or "",
+                    "form_company": company or "",
+                    "form_company_id": company_id or "",
+                    "companies": _list_companies(db),
+                },
+                status_code=200,
+            )
+        company_display_name = None
+        if selected_company_id is not None:
+            c = db.get(Company, selected_company_id)
+            company_display_name = c.name if c else None
     contact.full_name = data.full_name
     contact.email = data.email
     contact.phone = data.phone
-    contact.company = data.company
+    contact.company = company_display_name if company_display_name is not None else data.company
     contact.company_id = selected_company_id
     contact.updated_at = datetime.utcnow()
     db.commit()

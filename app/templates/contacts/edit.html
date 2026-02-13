@@ -26,7 +26,8 @@
   <div class="mb-4">
     <label for="company_id" class="block text-sm font-medium text-gray-700 mb-1">Existing company (optional)</label>
     {% set selected_company_id = form_company_id | default(contact.company_id, true) %}
-    <select id="company_id" name="company_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+    {% set company_text_prefilled = (form_company | default(contact.company or '', true)) %}
+    <select id="company_id" name="company_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"{% if company_text_prefilled %} disabled{% endif %}>
       <option value="">-- None --</option>
       {% for company_option in companies %}
       <option value="{{ company_option.id }}" {% if selected_company_id is not none and (selected_company_id | string) == (company_option.id | string) %}selected{% endif %}>{{ company_option.name }}</option>
@@ -40,6 +41,19 @@
     {% include "_ui/button.html" %}
   </div>
 </form>
+<script>
+(function() {
+  var companyInput = document.getElementById('company');
+  var companySelect = document.getElementById('company_id');
+  if (!companyInput || !companySelect) return;
+  function syncDropdown() {
+    companySelect.disabled = companyInput.value.trim().length > 0;
+  }
+  companyInput.addEventListener('input', syncDropdown);
+  companyInput.addEventListener('change', syncDropdown);
+  syncDropdown();
+})();
+</script>
 {% endcall %}
 
 <section class="notes mt-8">
