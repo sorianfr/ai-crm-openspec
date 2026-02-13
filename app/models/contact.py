@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from app.db.base import Base
 
@@ -42,3 +43,12 @@ class Contact(Base):
         back_populates="contacts",
     )
     notes: Mapped[list["Note"]] = relationship("Note", back_populates="contact")
+
+    @hybrid_property
+    def display_company(self) -> str:
+        """Linked company name when present, otherwise legacy company text."""
+        if self.company_ref is not None:
+            name = getattr(self.company_ref, "name", None)
+            if name:
+                return name
+        return self.company or ""

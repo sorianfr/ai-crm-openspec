@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
 from sqlalchemy import or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.templates import templates
 from app.db.session import get_db
@@ -50,7 +50,7 @@ def list_contacts(
     has_phone: bool = Query(default=False),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    stmt = select(Contact)
+    stmt = select(Contact).options(selectinload(Contact.company_ref))
 
     q = q.strip()
     if q:
@@ -174,7 +174,15 @@ def edit_contact(
     contact_id: int,
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    contact = _get_contact_or_404(db, contact_id)
+    contact = (
+        db.execute(
+            select(Contact)
+            .where(Contact.id == contact_id)
+            .options(selectinload(Contact.company_ref))
+        )
+        .unique()
+        .scalar_one_or_none()
+    )
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     notes = (

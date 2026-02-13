@@ -18,7 +18,7 @@
       <td class="px-4 py-3 text-sm text-gray-900">{{ contact.full_name }}</td>
       <td class="px-4 py-3 text-sm text-gray-600">{{ contact.email or "" }}</td>
       <td class="px-4 py-3 text-sm text-gray-600">{{ contact.phone or "" }}</td>
-      <td class="px-4 py-3 text-sm text-gray-600">{{ contact.company or "" }}</td>
+      <td class="px-4 py-3 text-sm text-gray-600">{{ contact.display_company or "" }}</td>
       <td class="px-4 py-3">
         {% set url = "/contacts/" ~ contact.id ~ "/edit" %}{% set label = "Edit" %}{% set style = "secondary" %}
         {% include "_ui/button.html" %}
