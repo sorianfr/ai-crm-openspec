@@ -1,47 +1,43 @@
 {% extends "base.html" %}
+{% from "_ui/card.html" import card %}
 
 {% block title %}New contact - Python CRM{% endblock %}
 
 {% block content %}
-<h1>New contact</h1>
+<h1 class="text-2xl font-bold text-gray-900 mb-4">New contact</h1>
 {% if errors %}
-<ul>
+<ul class="mb-4 list-disc list-inside text-sm text-red-600">
   {% for err in errors %}
   <li>{{ err }}</li>
   {% endfor %}
 </ul>
 {% endif %}
+
+{% call card() %}
 <form method="post" action="/contacts">
-  <p>
-    <label for="full_name">Full name (required)</label>
-    <input type="text" id="full_name" name="full_name" value="{{ form_full_name or '' }}" required />
-  </p>
-  <p>
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" value="{{ form_email or '' }}" />
-  </p>
-  <p>
-    <label for="phone">Phone</label>
-    <input type="text" id="phone" name="phone" value="{{ form_phone or '' }}" />
-  </p>
-  <p>
-    <label for="company">Company</label>
-    <input type="text" id="company" name="company" value="{{ form_company or '' }}" />
-  </p>
-  <p>
-    <label for="company_id">Existing company (optional)</label>
-    <select id="company_id" name="company_id">
+  {% set name = "full_name" %}{% set label = "Full name" %}{% set type = "text" %}{% set value = form_full_name or '' %}{% set required = true %}
+  {% include "_ui/form_field.html" %}
+  {% set name = "email" %}{% set label = "Email" %}{% set type = "email" %}{% set value = form_email or '' %}{% set required = false %}
+  {% include "_ui/form_field.html" %}
+  {% set name = "phone" %}{% set label = "Phone" %}{% set type = "text" %}{% set value = form_phone or '' %}{% set required = false %}
+  {% include "_ui/form_field.html" %}
+  {% set name = "company" %}{% set label = "Company" %}{% set type = "text" %}{% set value = form_company or '' %}{% set required = false %}
+  {% include "_ui/form_field.html" %}
+  <div class="mb-4">
+    <label for="company_id" class="block text-sm font-medium text-gray-700 mb-1">Existing company (optional)</label>
+    <select id="company_id" name="company_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
       <option value="">-- None --</option>
       {% for company_option in companies %}
-      <option value="{{ company_option.id }}" {% if (form_company_id | default('', true)) == (company_option.id | string) %}selected{% endif %}>
-        {{ company_option.name }}
-      </option>
+      <option value="{{ company_option.id }}" {% if (form_company_id | default('', true)) == (company_option.id | string) %}selected{% endif %}>{{ company_option.name }}</option>
       {% endfor %}
     </select>
-  </p>
-  <p>
-    <button type="submit">Create</button>
-    <a href="/contacts">Cancel</a>
-  </p>
+  </div>
+  <div class="flex gap-2">
+    {% set name = none %}{% set url = none %}{% set type = "submit" %}{% set label = "Create" %}{% set style = "primary" %}
+    {% include "_ui/button.html" %}
+    {% set url = "/contacts" %}{% set label = "Cancel" %}{% set style = "secondary" %}
+    {% include "_ui/button.html" %}
+  </div>
 </form>
+{% endcall %}
 {% endblock %}

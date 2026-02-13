@@ -4,10 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Python CRM{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
 </head>
-<body>
-    <nav><a href="/">Home</a> | <a href="/contacts">Contacts</a> | <a href="/companies">Companies</a></nav>
-    {% block content %}{% endblock %}
+<body class="bg-gray-50 text-gray-900">
+    <nav class="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+        <div class="max-w-4xl mx-auto flex gap-4">
+            <a href="/" class="text-gray-600 hover:text-gray-900">Home</a>
+            <a href="/contacts" class="text-gray-600 hover:text-gray-900">Contacts</a>
+            <a href="/companies" class="text-gray-600 hover:text-gray-900">Companies</a>
+        </div>
+    </nav>
+    <main class="max-w-4xl mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>

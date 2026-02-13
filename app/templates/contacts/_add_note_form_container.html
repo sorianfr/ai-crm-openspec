@@ -1,20 +1,15 @@
-<div id="add-note-form-container">
+<div id="add-note-form-container" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
   {% if note_errors|default([]) %}
-  <ul class="note-errors">
+  <ul class="mb-4 list-disc list-inside text-sm text-red-600">
     {% for err in note_errors %}
     <li>{{ err }}</li>
     {% endfor %}
   </ul>
   {% endif %}
-  <form hx-post="/contacts/{{ contact.id }}/notes"
-        hx-target="#contact-notes-list"
-        hx-swap="beforeend">
-    <p>
-      <label for="note_content">Note</label>
-      <textarea id="note_content" name="content" rows="3">{{ form_content|default('', true) }}</textarea>
-    </p>
-    <p>
-      <button type="submit">Add note</button>
-    </p>
+  <form hx-post="/contacts/{{ contact.id }}/notes" hx-target="#contact-notes-list" hx-swap="beforeend">
+    {% set name = "content" %}{% set id = "note_content" %}{% set label = "Note" %}{% set type = "textarea" %}{% set value = form_content|default('', true) %}{% set required = false %}
+    {% include "_ui/form_field.html" %}
+    {% set name = none %}{% set url = none %}{% set type = "submit" %}{% set label = "Add note" %}{% set style = "primary" %}
+    {% include "_ui/button.html" %}
   </form>
 </div>

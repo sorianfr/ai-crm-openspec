@@ -1,10 +1,9 @@
-<div id="note-{{ note.id }}" class="note-row">
-  <span class="note-content">{{ note.content }}</span>
-  <span class="note-created">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-  <button type="button"
-          hx-post="/notes/{{ note.id }}/delete"
-          hx-target="#note-{{ note.id }}"
-          hx-swap="outerHTML">
-    Delete
-  </button>
+<div id="note-{{ note.id }}" class="note-row flex items-center justify-between gap-4 py-2 px-3 bg-white border border-gray-200 rounded-md">
+  <div class="flex-1 min-w-0">
+    <span class="text-sm text-gray-900">{{ note.content }}</span>
+    <span class="text-xs text-gray-500 ml-2">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+  </div>
+  {% set url = none %}{% set type = "button" %}{% set label = "Delete" %}{% set style = "danger" %}
+  {% set hx_post = "/notes/" ~ note.id ~ "/delete" %}{% set hx_target = "#note-" ~ note.id %}{% set hx_swap = "outerHTML" %}
+  {% include "_ui/button.html" %}
 </div>

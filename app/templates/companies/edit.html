@@ -1,24 +1,28 @@
 {% extends "base.html" %}
+{% from "_ui/card.html" import card %}
 
 {% block title %}Edit company - Python CRM{% endblock %}
 
 {% block content %}
-<h1>Edit company</h1>
+<h1 class="text-2xl font-bold text-gray-900 mb-4">Edit company</h1>
 {% if errors %}
-<ul>
+<ul class="mb-4 list-disc list-inside text-sm text-red-600">
   {% for err in errors %}
   <li>{{ err }}</li>
   {% endfor %}
 </ul>
 {% endif %}
+
+{% call card() %}
 <form method="post" action="/companies/{{ company.id }}">
-  <p>
-    <label for="name">Name (required)</label>
-    <input type="text" id="name" name="name" value="{{ form_name | default(company.name, true) }}" required />
-  </p>
-  <p>
-    <button type="submit">Update</button>
-    <a href="/companies">Cancel</a>
-  </p>
+  {% set name = "name" %}{% set label = "Name" %}{% set type = "text" %}{% set value = form_name | default(company.name, true) %}{% set required = true %}
+  {% include "_ui/form_field.html" %}
+  <div class="flex gap-2">
+    {% set name = none %}{% set url = none %}{% set type = "submit" %}{% set label = "Update" %}{% set style = "primary" %}
+    {% include "_ui/button.html" %}
+    {% set url = "/companies" %}{% set label = "Cancel" %}{% set style = "secondary" %}
+    {% include "_ui/button.html" %}
+  </div>
 </form>
+{% endcall %}
 {% endblock %}

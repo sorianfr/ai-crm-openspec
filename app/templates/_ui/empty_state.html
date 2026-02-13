@@ -1,0 +1,7 @@
+{# Params: message, action_url (optional), action_label (optional, e.g. "Add one") #}
+<div class="text-center py-12 text-gray-500">
+  <p class="mb-4">{{ message }}</p>
+  {% if action_url and action_label %}
+  <a href="{{ action_url }}" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">{{ action_label }}</a>
+  {% endif %}
+</div>

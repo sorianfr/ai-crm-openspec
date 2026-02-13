@@ -1,0 +1,26 @@
+{# Params: name, id (defaults to name), label, type (text|email|textarea|number|hidden|select), value, errors (list), required (bool), placeholder. For select: options (list of {value, label}) #}
+{% set field_id = id | default(name) %}
+<div class="mb-4">
+  <label for="{{ field_id }}" class="block text-sm font-medium text-gray-700 mb-1">{{ label }}{% if required %} *{% endif %}</label>
+  {% if type == 'textarea' %}
+  <textarea name="{{ name }}" id="{{ field_id }}" rows="3" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+    {% if placeholder %} placeholder="{{ placeholder }}"{% endif %}
+    {% if required %} required{% endif %}
+  >{{ value | default('') | e }}</textarea>
+  {% elif type == 'select' and options is defined %}
+  <select name="{{ name }}" id="{{ field_id }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" {% if required %} required{% endif %}>
+    {% for opt in options %}
+    <option value="{{ opt.value | e }}" {% if (value | default('', true) | string) == (opt.value | string) %}selected{% endif %}>{{ opt.label | e }}</option>
+    {% endfor %}
+  </select>
+  {% else %}
+  <input type="{{ type | default('text') }}" name="{{ name }}" id="{{ field_id }}" value="{{ value | default('') | e }}"
+    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+    {% if placeholder %} placeholder="{{ placeholder }}"{% endif %}
+    {% if required %} required{% endif %}
+  />
+  {% endif %}
+  {% if errors %}
+  <p class="mt-1 text-sm text-red-600">{{ errors | join(', ') }}</p>
+  {% endif %}
+</div>

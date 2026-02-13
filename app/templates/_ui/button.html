@@ -1,0 +1,15 @@
+{# Params: style (primary|secondary|danger), label. Link: set url. Button: set type (submit|button). HTMX: hx_post, hx_target, hx_swap, hx_confirm for button; hx_get, hx_target, hx_swap for link. #}
+{% set base = "inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 " %}
+{% set primary = "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 " %}
+{% set secondary = "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500 " %}
+{% set danger = "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 " %}
+{% set s = style | default('primary') %}
+{% set classes = base + (primary if s == 'primary' else (danger if s == 'danger' else secondary)) %}
+{% if url %}
+<a href="{{ url }}" class="{{ classes }}"{% if hx_get %} hx-get="{{ hx_get }}" hx-target="{{ hx_target | default('#contacts-results') }}" hx-swap="{{ hx_swap | default('innerHTML') }}"{% endif %}>{{ label | default('Link') }}</a>
+{% else %}
+<button type="{{ type | default('submit') }}" class="{{ classes }}"
+  {% if hx_post %} hx-post="{{ hx_post }}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap | default('outerHTML') }}"{% if hx_confirm %} hx-confirm="{{ hx_confirm }}"{% endif %}{% endif %}
+  {% if name %} name="{{ name }}"{% endif %}
+>{{ label | default('Submit') }}</button>
+{% endif %}
