@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_ui/card.html" import card %}
+
+{% block title %}{{ contact.full_name }} - Python CRM{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-4">{{ contact.full_name }}</h1>
+
+{% call card() %}
+<div class="space-y-2 mb-4">
+  {% if contact.email %}
+  <p class="text-sm"><span class="text-gray-600">Email:</span> {{ contact.email }}</p>
+  {% endif %}
+  {% if contact.phone %}
+  <p class="text-sm"><span class="text-gray-600">Phone:</span> {{ contact.phone }}</p>
+  {% endif %}
+  {% if contact.display_company %}
+  <p class="text-sm"><span class="text-gray-600">Company:</span> {{ contact.display_company }}</p>
+  {% endif %}
+</div>
+<p>
+  <a href="/contacts/{{ contact.id }}/edit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">Edit contact</a>
+</p>
+{% endcall %}
+
+<section class="notes mt-8">
+  <h2 class="text-xl font-semibold text-gray-900 mb-4">Notes</h2>
+  <div id="contact-notes-list" class="space-y-2">
+    {% for note in notes %}
+    {% include "contacts/_note_row.html" %}
+    {% endfor %}
+  </div>
+  {% include "contacts/_add_note_form_container.html" %}
+</section>
+
+<section class="activities mt-8">
+  <h2 class="text-xl font-semibold text-gray-900 mb-4">Activities</h2>
+  <div id="contact-activities-list" class="space-y-2">
+    {% for activity in activities|default([]) %}
+    {% include "contacts/_activity_row.html" %}
+    {% endfor %}
+  </div>
+  {% include "contacts/_add_activity_form_container.html" %}
+</section>
+{% endblock %}

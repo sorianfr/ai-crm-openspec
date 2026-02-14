@@ -126,6 +126,50 @@ def new_contact(
     )
 
 
+@router.get("/contacts/{contact_id:int}", response_class=HTMLResponse)
+def contact_detail(
+    request: Request,
+    contact_id: int,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    contact = (
+        db.execute(
+            select(Contact)
+            .where(Contact.id == contact_id)
+            .options(selectinload(Contact.company_ref))
+        )
+        .unique()
+        .scalar_one_or_none()
+    )
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    notes = (
+        db.execute(
+            select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    activities = (
+        db.execute(
+            select(Activity)
+            .where(Activity.contact_id == contact_id)
+            .order_by(Activity.activity_date.desc())
+        )
+        .scalars()
+        .all()
+    )
+    return templates.TemplateResponse(
+        "contacts/detail.html",
+        {
+            "request": request,
+            "contact": contact,
+            "notes": notes,
+            "activities": activities,
+        },
+    )
+
+
 @router.post("/contacts")
 def create_contact(
     request: Request,
@@ -233,29 +277,11 @@ def edit_contact(
     )
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
-    notes = (
-        db.execute(
-            select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
-        )
-        .scalars()
-        .all()
-    )
-    activities = (
-        db.execute(
-            select(Activity)
-            .where(Activity.contact_id == contact_id)
-            .order_by(Activity.activity_date.desc())
-        )
-        .scalars()
-        .all()
-    )
     return templates.TemplateResponse(
         "contacts/edit.html",
         {
             "request": request,
             "contact": contact,
-            "notes": notes,
-            "activities": activities,
             "errors": [],
             "companies": _list_companies(db),
         },
@@ -285,29 +311,11 @@ def update_contact(
         )
     except ValidationError as e:
         errors = [err["msg"] for err in e.errors()]
-        notes = (
-            db.execute(
-                select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
-            )
-            .scalars()
-            .all()
-        )
-        activities = (
-            db.execute(
-                select(Activity)
-                .where(Activity.contact_id == contact_id)
-                .order_by(Activity.activity_date.desc())
-            )
-            .scalars()
-            .all()
-        )
         return templates.TemplateResponse(
             "contacts/edit.html",
             {
                 "request": request,
                 "contact": contact,
-                "notes": notes,
-                "activities": activities,
                 "errors": errors,
                 "form_full_name": full_name,
                 "form_email": email or "",
@@ -322,29 +330,11 @@ def update_contact(
     if company_text:
         resolved_company, resolve_error = _resolve_or_create_company(db, company_text)
         if resolve_error:
-            notes = (
-                db.execute(
-                    select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
-                )
-                .scalars()
-                .all()
-            )
-            activities = (
-                db.execute(
-                    select(Activity)
-                    .where(Activity.contact_id == contact_id)
-                    .order_by(Activity.activity_date.desc())
-                )
-                .scalars()
-                .all()
-            )
             return templates.TemplateResponse(
                 "contacts/edit.html",
                 {
                     "request": request,
                     "contact": contact,
-                    "notes": notes,
-                    "activities": activities,
                     "errors": [resolve_error],
                     "form_full_name": full_name,
                     "form_email": email or "",
@@ -360,29 +350,11 @@ def update_contact(
     else:
         selected_company_id, company_id_error = _resolve_company_id(db, company_id)
         if company_id_error:
-            notes = (
-                db.execute(
-                    select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
-                )
-                .scalars()
-                .all()
-            )
-            activities = (
-                db.execute(
-                    select(Activity)
-                    .where(Activity.contact_id == contact_id)
-                    .order_by(Activity.activity_date.desc())
-                )
-                .scalars()
-                .all()
-            )
             return templates.TemplateResponse(
                 "contacts/edit.html",
                 {
                     "request": request,
                     "contact": contact,
-                    "notes": notes,
-                    "activities": activities,
                     "errors": [company_id_error],
                     "form_full_name": full_name,
                     "form_email": email or "",

@@ -37,6 +37,7 @@
   <div class="flex gap-2">
     {% set name = none %}{% set url = none %}{% set type = "submit" %}{% set label = "Update" %}{% set style = "primary" %}
     {% include "_ui/button.html" %}
+    <a href="/contacts/{{ contact.id }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Back to contact</a>
     {% set url = "/contacts" %}{% set label = "Cancel" %}{% set style = "secondary" %}
     {% include "_ui/button.html" %}
   </div>
@@ -55,24 +56,4 @@
 })();
 </script>
 {% endcall %}
-
-<section class="notes mt-8">
-  <h2 class="text-xl font-semibold text-gray-900 mb-4">Notes</h2>
-  <div id="contact-notes-list" class="space-y-2">
-    {% for note in notes %}
-    {% include "contacts/_note_row.html" %}
-    {% endfor %}
-  </div>
-  {% include "contacts/_add_note_form_container.html" %}
-</section>
-
-<section class="activities mt-8">
-  <h2 class="text-xl font-semibold text-gray-900 mb-4">Activities</h2>
-  <div id="contact-activities-list" class="space-y-2">
-    {% for activity in activities|default([]) %}
-    {% include "contacts/_activity_row.html" %}
-    {% endfor %}
-  </div>
-  {% include "contacts/_add_activity_form_container.html" %}
-</section>
 {% endblock %}
