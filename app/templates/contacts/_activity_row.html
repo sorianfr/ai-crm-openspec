@@ -1,0 +1,10 @@
+<div id="activity-{{ activity.id }}" class="activity-row flex items-center justify-between gap-4 py-2 px-3 bg-white border border-gray-200 rounded-md">
+  <div class="flex-1 min-w-0">
+    <span class="text-sm font-medium text-gray-700">{{ activity.type }}</span>
+    <span class="text-sm text-gray-900 ml-2">{{ activity.description }}</span>
+    <span class="text-xs text-gray-500 ml-2">{{ activity.activity_date.strftime('%Y-%m-%d %H:%M') }}</span>
+  </div>
+  {% set url = none %}{% set type = "button" %}{% set label = "Delete" %}{% set style = "danger" %}
+  {% set hx_post = "/activities/" ~ activity.id ~ "/delete" %}{% set hx_target = "#activity-" ~ activity.id %}{% set hx_swap = "outerHTML" %}
+  {% include "_ui/button.html" %}
+</div>

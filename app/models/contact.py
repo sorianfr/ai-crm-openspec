@@ -12,6 +12,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.activity import Activity
     from app.models.company import Company
     from app.models.note import Note
 
@@ -43,6 +44,9 @@ class Contact(Base):
         back_populates="contacts",
     )
     notes: Mapped[list["Note"]] = relationship("Note", back_populates="contact")
+    activities: Mapped[list["Activity"]] = relationship(
+        "Activity", back_populates="contact"
+    )
 
     @hybrid_property
     def display_company(self) -> str:

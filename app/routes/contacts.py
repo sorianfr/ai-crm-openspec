@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.templates import templates
 from app.db.session import get_db
-from app.models import Company, Contact, Note
+from app.models import Activity, Company, Contact, Note
+from app.schemas.activity import ActivityFormSchema
 from app.schemas.contact import ContactFormSchema
 from app.schemas.note import NoteFormSchema
 
@@ -239,12 +240,22 @@ def edit_contact(
         .scalars()
         .all()
     )
+    activities = (
+        db.execute(
+            select(Activity)
+            .where(Activity.contact_id == contact_id)
+            .order_by(Activity.activity_date.desc())
+        )
+        .scalars()
+        .all()
+    )
     return templates.TemplateResponse(
         "contacts/edit.html",
         {
             "request": request,
             "contact": contact,
             "notes": notes,
+            "activities": activities,
             "errors": [],
             "companies": _list_companies(db),
         },
@@ -281,12 +292,22 @@ def update_contact(
             .scalars()
             .all()
         )
+        activities = (
+            db.execute(
+                select(Activity)
+                .where(Activity.contact_id == contact_id)
+                .order_by(Activity.activity_date.desc())
+            )
+            .scalars()
+            .all()
+        )
         return templates.TemplateResponse(
             "contacts/edit.html",
             {
                 "request": request,
                 "contact": contact,
                 "notes": notes,
+                "activities": activities,
                 "errors": errors,
                 "form_full_name": full_name,
                 "form_email": email or "",
@@ -308,12 +329,22 @@ def update_contact(
                 .scalars()
                 .all()
             )
+            activities = (
+                db.execute(
+                    select(Activity)
+                    .where(Activity.contact_id == contact_id)
+                    .order_by(Activity.activity_date.desc())
+                )
+                .scalars()
+                .all()
+            )
             return templates.TemplateResponse(
                 "contacts/edit.html",
                 {
                     "request": request,
                     "contact": contact,
                     "notes": notes,
+                    "activities": activities,
                     "errors": [resolve_error],
                     "form_full_name": full_name,
                     "form_email": email or "",
@@ -336,12 +367,22 @@ def update_contact(
                 .scalars()
                 .all()
             )
+            activities = (
+                db.execute(
+                    select(Activity)
+                    .where(Activity.contact_id == contact_id)
+                    .order_by(Activity.activity_date.desc())
+                )
+                .scalars()
+                .all()
+            )
             return templates.TemplateResponse(
                 "contacts/edit.html",
                 {
                     "request": request,
                     "contact": contact,
                     "notes": notes,
+                    "activities": activities,
                     "errors": [company_id_error],
                     "form_full_name": full_name,
                     "form_email": email or "",
@@ -402,6 +443,69 @@ def create_note(
         {"request": request, "note": note},
     )
     return fragment
+
+
+@router.post("/contacts/{contact_id:int}/activities")
+def create_activity(
+    request: Request,
+    contact_id: int,
+    db: Session = Depends(get_db),
+    type: str = Form(""),
+    description: str = Form(""),
+    activity_date: str = Form(""),
+) -> Response:
+    contact = _get_contact_or_404(db, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    try:
+        data = ActivityFormSchema(
+            type=type.strip(),
+            description=description,
+            activity_date=activity_date,
+        )
+    except ValidationError as e:
+        activity_errors = [err["msg"] for err in e.errors()]
+        fragment = templates.TemplateResponse(
+            "contacts/_add_activity_form_container.html",
+            {
+                "request": request,
+                "contact": contact,
+                "activity_errors": activity_errors,
+                "form_type": type,
+                "form_description": description,
+                "form_activity_date": activity_date,
+            },
+        )
+        fragment.headers["HX-Retarget"] = "#add-activity-form-container"
+        fragment.headers["HX-Reswap"] = "outerHTML"
+        return fragment
+    activity = Activity(
+        contact_id=contact_id,
+        type=data.type,
+        description=data.description,
+        activity_date=data.activity_date,
+    )
+    db.add(activity)
+    db.commit()
+    db.refresh(activity)
+    fragment = templates.TemplateResponse(
+        "contacts/_activity_row.html",
+        {"request": request, "activity": activity},
+    )
+    return fragment
+
+
+@router.post("/activities/{activity_id:int}/delete")
+def delete_activity(
+    activity_id: int,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    activity = db.get(Activity, activity_id)
+    if activity is None:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    db.delete(activity)
+    db.commit()
+    return HTMLResponse(content="", status_code=200)
 
 
 @router.post("/notes/{note_id:int}/delete")

@@ -1,0 +1,28 @@
+<div id="add-activity-form-container" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+  {% if activity_errors|default([]) %}
+  <ul class="mb-4 list-disc list-inside text-sm text-red-600">
+    {% for err in activity_errors %}
+    <li>{{ err }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form hx-post="/contacts/{{ contact.id }}/activities" hx-target="#contact-activities-list" hx-swap="beforeend">
+    <div class="mb-4">
+      <label for="activity_type" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+      <select id="activity_type" name="type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required>
+        <option value="call" {% if form_type|default('') == 'call' %}selected{% endif %}>Call</option>
+        <option value="email" {% if form_type|default('') == 'email' %}selected{% endif %}>Email</option>
+        <option value="meeting" {% if form_type|default('') == 'meeting' %}selected{% endif %}>Meeting</option>
+        <option value="task" {% if form_type|default('') == 'task' %}selected{% endif %}>Task</option>
+      </select>
+    </div>
+    {% set name = "description" %}{% set id = "activity_description" %}{% set label = "Description" %}{% set type = "textarea" %}{% set value = form_description|default('', true) %}{% set required = true %}
+    {% include "_ui/form_field.html" %}
+    <div class="mb-4">
+      <label for="activity_date" class="block text-sm font-medium text-gray-700 mb-1">Date and time</label>
+      <input type="datetime-local" id="activity_date" name="activity_date" value="{{ form_activity_date|default('', true) }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required>
+    </div>
+    {% set name = none %}{% set url = none %}{% set type = "submit" %}{% set label = "Add activity" %}{% set style = "primary" %}
+    {% include "_ui/button.html" %}
+  </form>
+</div>

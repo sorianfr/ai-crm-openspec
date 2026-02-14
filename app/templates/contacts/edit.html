@@ -65,4 +65,14 @@
   </div>
   {% include "contacts/_add_note_form_container.html" %}
 </section>
+
+<section class="activities mt-8">
+  <h2 class="text-xl font-semibold text-gray-900 mb-4">Activities</h2>
+  <div id="contact-activities-list" class="space-y-2">
+    {% for activity in activities|default([]) %}
+    {% include "contacts/_activity_row.html" %}
+    {% endfor %}
+  </div>
+  {% include "contacts/_add_activity_form_container.html" %}
+</section>
 {% endblock %}
