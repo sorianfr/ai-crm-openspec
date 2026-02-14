@@ -18,7 +18,7 @@ The system SHALL persist contact records in the database with fields: id, full_n
 
 ### Requirement: Contacts list route
 
-The system SHALL provide a GET route at `/contacts` that returns a server-rendered list of contacts and supports optional query parameters `q` (string), `has_email` (bool), and `has_phone` (bool).
+The system SHALL provide a GET route at `/contacts` that returns a server-rendered list of contacts and supports optional query parameters `q` (string), `has_email` (bool), and `has_phone` (bool). The list page and list fragment SHALL include a direct link to the contact detail page for each contact so users can open the detail page (Notes and Activities) without going through Edit.
 
 #### Scenario: List route exists
 - **WHEN** a GET request is made to `/contacts` without `HX-Request`
@@ -29,6 +29,11 @@ The system SHALL provide a GET route at `/contacts` that returns a server-render
 - **WHEN** the list page is rendered
 - **THEN** it SHALL be rendered with Jinja2 using the existing template infrastructure
 - **AND** each contact row SHALL be suitable for HTMX delete (e.g. identifiable container for row removal)
+
+#### Scenario: View link to contact detail page
+- **WHEN** the contacts list page or list fragment is rendered
+- **THEN** each contact row SHALL include a direct link to the contact detail page (e.g. "View" or "View contact") pointing to `/contacts/{id}` for that contact
+- **AND** the link SHALL allow users to open the contact detail page (summary, Notes, Activities) without going through the edit page
 
 #### Scenario: Query parameters filter results
 - **WHEN** a GET request is made to `/contacts` with any of `q`, `has_email`, or `has_phone`
@@ -52,6 +57,7 @@ The system SHALL provide a GET route at `/contacts` that returns a server-render
 - **WHEN** a GET request is made to `/contacts` with `HX-Request` present
 - **THEN** the route SHALL return only the contacts list/table fragment
 - **AND** the fragment SHALL be suitable for swap into a stable container (e.g. `#contacts-results`)
+- **AND** the fragment SHALL include the View link to the contact detail page for each contact row
 
 #### Scenario: List company display uses linked name with legacy fallback
 - **WHEN** the contacts list page is rendered for a contact
