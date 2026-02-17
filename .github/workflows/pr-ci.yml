@@ -30,17 +30,30 @@ jobs:
           load: true
           tags: project1-app:ci
 
-      - name: Compose up (smoke)
+      - name: Compose up (db + app)
         run: |
           docker compose up -d --build
-          # espera corta a que arranque
-          for i in {1..30}; do
+
+      - name: Wait for app to be up
+        run: |
+          for i in {1..60}; do
             if curl -fsS http://localhost:8000/ >/dev/null; then
               echo "App up"
-              break
+              exit 0
             fi
             sleep 1
           done
+          echo "App did not start in time"
+          docker compose logs
+          exit 1
+
+      - name: Run DB migrations (alembic)
+        run: |
+          # Ejecuta alembic dentro del contenedor app
+          docker compose exec -T app alembic upgrade head
+
+      - name: Smoke test
+        run: |
           curl -fsS http://localhost:8000/
           curl -fsS http://localhost:8000/contacts
 
