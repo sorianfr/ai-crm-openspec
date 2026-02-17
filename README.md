@@ -23,14 +23,13 @@ The application follows **12-factor principles**:
 The application reads configuration from environment variables.
 
   --------------------------------------------------------------------------
-  Variable         Description                             Default (dev
-                                                           only)
-  ---------------- --------------------------------------- -----------------
-  `APP_ENV`        `development`, `staging`, `production`  `development`
-
-  `DATABASE_URL`   SQLAlchemy database connection string   SQLite (dev only)
-
-  `DEBUG`          Enable debug mode (`true` / `false`)    `false`
+  Variable                   Description                     Default (dev only)
+  -------------------------  ------------------------------  ------------------
+  `APP_ENV`                  development, staging, production  development
+  `DATABASE_URL`             SQLAlchemy connection string    SQLite (dev only)
+  `JWT_SECRET`               Secret for JWT signing (auth)   (none; set in prod)
+  `JWT_EXPIRATION_MINUTES`   Access token lifetime (minutes) 60
+  `DEBUG`                    Enable debug mode               false
   --------------------------------------------------------------------------
 
 ------------------------------------------------------------------------

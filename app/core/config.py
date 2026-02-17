@@ -28,5 +28,10 @@ DATABASE_URL: str = _get_database_url()
 # Debug mode (default false for production safety)
 DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
 
+# JWT: secret and expiration (required for auth; use strong secret in production)
+JWT_SECRET: str = os.getenv("JWT_SECRET", "")
+JWT_EXPIRATION_MINUTES: int = int(os.getenv("JWT_EXPIRATION_MINUTES", "60"))
+JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+
 # Project root (for resolving paths relative to project)
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent

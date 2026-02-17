@@ -8,9 +8,11 @@ from pydantic import ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.audit import log_audit
+from app.core.auth import require_roles
 from app.core.templates import templates
 from app.db.session import get_db
-from app.models import Activity, Company, Contact, Note
+from app.models import Activity, Company, Contact, Note, User
 from app.schemas.activity import ActivityFormSchema
 from app.schemas.contact import ContactFormSchema
 from app.schemas.note import NoteFormSchema
@@ -174,6 +176,7 @@ def contact_detail(
 def create_contact(
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["admin", "manager"])),
     full_name: str = Form(""),
     email: str | None = Form(None),
     phone: str | None = Form(None),
@@ -255,6 +258,8 @@ def create_contact(
         company_id=selected_company_id,
     )
     db.add(contact)
+    db.flush()
+    log_audit(db, "CREATE", "contact", contact.id, user_id=current_user.id)
     db.commit()
     db.refresh(contact)
     return RedirectResponse(url="/contacts", status_code=303)
@@ -375,6 +380,7 @@ def update_contact(
     contact.company = company_display_name if company_display_name is not None else data.company
     contact.company_id = selected_company_id
     contact.updated_at = datetime.utcnow()
+    log_audit(db, "UPDATE", "contact", contact_id, user_id=None)
     db.commit()
     db.refresh(contact)
     return RedirectResponse(url="/contacts", status_code=303)
@@ -501,6 +507,7 @@ def delete_contact(
     contact = _get_contact_or_404(db, contact_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
+    log_audit(db, "DELETE", "contact", contact_id, user_id=None)
     db.delete(contact)
     db.commit()
     return HTMLResponse(content="", status_code=200)

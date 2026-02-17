@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.audit import log_audit
 from app.core.templates import templates
 from app.db.session import get_db
 from app.models import Company
@@ -59,6 +60,8 @@ def create_company(
 
     company = Company(name=data.name)
     db.add(company)
+    db.flush()
+    log_audit(db, "CREATE", "company", company.id, user_id=None)
     db.commit()
     return RedirectResponse(url="/companies", status_code=303)
 
@@ -107,6 +110,7 @@ def update_company(
 
     company.name = data.name
     company.updated_at = datetime.utcnow()
+    log_audit(db, "UPDATE", "company", company_id, user_id=None)
     db.commit()
     return RedirectResponse(url="/companies", status_code=303)
 
@@ -121,6 +125,7 @@ def delete_company(
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    log_audit(db, "DELETE", "company", company_id, user_id=None)
     db.delete(company)
     db.commit()
 
