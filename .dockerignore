@@ -1,0 +1,40 @@
+# Virtual env and Python cache
+.venv
+venv
+__pycache__
+*.py[cod]
+*.pyo
+.pytest_cache
+.mypy_cache
+
+# Git and env
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Local DBs (do not bake into image)
+*.db
+app.db
+crm.db
+
+# IDE and tooling
+.codex
+.cursor
+.vscode
+.idea
+
+# OpenSpec (not needed at runtime)
+openspec
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Docs and tests (optional; remove if app needs them at runtime)
+README.md
+*.md
+tests
+docs

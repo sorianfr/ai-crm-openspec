@@ -1,0 +1,53 @@
+name: PR CI (build + smoke)
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - "requirements.txt"
+      - "requirements-dev.txt"
+      - "openspec/changes/**"
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (local)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: project1-app:ci
+
+      - name: Compose up (smoke)
+        run: |
+          docker compose up -d --build
+          # espera corta a que arranque
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/ >/dev/null; then
+              echo "App up"
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8000/
+          curl -fsS http://localhost:8000/contacts
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

@@ -1,31 +1,5 @@
 ## ADDED Requirements
 
-### Requirement: FastAPI application structure
-
-The system SHALL provide a well-organized FastAPI project structure with proper module separation, following Python best practices.
-
-#### Scenario: Application entry point exists
-- **WHEN** the application starts
-- **THEN** a main entry point file SHALL exist at `app/main.py`
-- **AND** it SHALL create and configure a FastAPI application instance
-
-#### Scenario: Project organization
-- **WHEN** examining the project structure
-- **THEN** the project SHALL have the following structure:
-  - `app/main.py`: Application entry point
-  - `app/core/config.py`: Configuration module
-  - `app/db/session.py`: Database session management
-  - `app/db/base.py`: Database base configuration
-  - `app/routes/`: Route handlers directory
-  - `app/templates/`: Jinja2 templates directory
-  - `app/static/`: Static assets directory
-- **AND** modules SHALL be organized by functionality
-
-#### Scenario: FastAPI app configuration
-- **WHEN** the FastAPI application is initialized
-- **THEN** it SHALL be configured with appropriate metadata (title, description, version)
-- **AND** it SHALL enable automatic OpenAPI documentation at `/docs` and `/redoc`
-
 ### Requirement: Configuration from environment (12-factor)
 
 The application SHALL read configuration from environment variables. The config module (e.g. `app/core/config.py`) SHALL load at least: `DATABASE_URL` (database connection string), `DEBUG` (boolean), and `APP_ENV` (e.g. development, staging, production). Defaults when env vars are unset SHALL be production-safe where applicable (e.g. DEBUG defaults to false). When `APP_ENV` indicates production, the application SHALL require `DATABASE_URL` to be set (e.g. fail fast at startup if missing); when not production, a default database URL MAY be used for development.
