@@ -30,6 +30,7 @@
       </td>
       <td class="px-4 py-3">
         <form method="post" action="/companies/{{ company.id }}/delete" class="inline">
+          {% include "_ui/csrf_input.html" %}
           {% set url = none %}{% set type = "submit" %}{% set label = "Delete" %}{% set style = "danger" %}
           {% include "_ui/button.html" %}
         </form>

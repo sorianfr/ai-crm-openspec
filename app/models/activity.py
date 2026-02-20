@@ -20,6 +20,11 @@ class Activity(Base):
     __tablename__ = "activities"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     contact_id: Mapped[int] = mapped_column(
         ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False, index=True
     )

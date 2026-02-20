@@ -86,3 +86,43 @@ The system SHALL return 404 Not Found when a contact id or activity id is used i
 #### Scenario: 404 for delete activity
 - **WHEN** POST `/activities/{activity_id}/delete` is requested and the activity does not exist
 - **THEN** the response SHALL be 404 Not Found
+
+### Requirement: Activities are tenant-scoped
+
+Activities SHALL have tenant_id and SHALL only be accessible when they match the current user's tenant. Creating an activity under a contact SHALL enforce that the contact belongs to the current tenant; otherwise the system SHALL return 404.
+
+#### Scenario: Activity has tenant_id and matches current tenant
+- **WHEN** an activity is created, read, updated, or deleted
+- **THEN** the activity SHALL have tenant_id set to current_user.tenant_id (on create)
+- **AND** reads/updates/deletes SHALL resolve the activity (and contact if applicable) within the current tenant
+- **AND** cross-tenant access SHALL return 404
+
+#### Scenario: Create activity under contact enforces same tenant
+- **WHEN** an activity is created under a contact (e.g. POST /contacts/{id}/activities)
+- **THEN** the system SHALL verify the contact exists and has tenant_id = current_user.tenant_id
+- **AND** if the contact does not exist or belongs to another tenant SHALL return 404
+- **AND** the new activity SHALL have tenant_id = current_user.tenant_id
+
+#### Scenario: List and delete activities scoped by tenant
+- **WHEN** activities are listed for a contact or an activity is deleted by id
+- **THEN** the contact (if used) SHALL be resolved within the current tenant
+- **AND** the activity SHALL be resolved within the current tenant
+- **AND** SHALL NOT return or modify activities belonging to other tenants
+
+### Requirement: Web routes require session authentication and CSRF
+
+All activity web routes (create, delete) SHALL require session authentication and CSRF validation on mutations.
+
+#### Scenario: Unauthenticated access redirects to login
+- **WHEN** an unauthenticated request is made to an activity web route
+- **THEN** the system SHALL redirect to /login
+- **AND** SHALL NOT create or delete activities
+
+#### Scenario: Mutations require CSRF
+- **WHEN** a POST request creates or deletes an activity
+- **THEN** the request SHALL include a valid CSRF token
+- **AND** SHALL be rejected with 403 if the token is missing or invalid
+
+#### Scenario: Tenant scoping preserved
+- **WHEN** activity web routes are accessed by an authenticated user
+- **THEN** tenant scoping SHALL remain in effect (activities created under contacts in current tenant; cross-tenant access returns 404)

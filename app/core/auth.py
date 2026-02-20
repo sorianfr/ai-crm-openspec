@@ -15,12 +15,13 @@ security = HTTPBearer(auto_error=False)
 
 
 def create_access_token(user: User) -> str:
-    """Build a JWT with sub, role, exp (HS256)."""
+    """Build a JWT with sub, role, tenant_id, exp (HS256). tenant_id is non-authoritative; DB user.tenant_id is used for enforcement."""
     now = datetime.now(timezone.utc)
     expire = now + timedelta(minutes=JWT_EXPIRATION_MINUTES)
     payload = {
         "sub": str(user.id),
         "role": user.role,
+        "tenant_id": user.tenant_id,
         "exp": expire,
         "iat": now,
     }
@@ -83,6 +84,11 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+
+def get_current_tenant(current_user: User = Depends(get_current_user)) -> int:
+    """Return current user's tenant_id (from DB; authoritative for enforcement)."""
+    return current_user.tenant_id
 
 
 def require_roles(allowed_roles: list[str]):

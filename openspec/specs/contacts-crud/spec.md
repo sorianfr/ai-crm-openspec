@@ -231,3 +231,40 @@ At least one contact CRUD endpoint SHALL require JWT authentication and role-bas
 #### Scenario: Protected endpoint behavior
 - **WHEN** a request to a protected contact endpoint is made with a valid JWT and an allowed role
 - **THEN** the route handler SHALL execute normally and SHALL return the usual success or error response (e.g. 200, 302, 404) according to the existing contacts-crud requirements
+
+### Requirement: Contacts are tenant-scoped
+
+All contact list, query, and mutations SHALL be scoped by current_user.tenant_id. Cross-tenant access by id SHALL return 404. New contacts SHALL be created with current tenant.
+
+#### Scenario: List filtered by tenant
+- **WHEN** contacts are listed or searched
+- **THEN** the query SHALL filter by tenant_id = current_user.tenant_id
+
+#### Scenario: Read/update/delete by id returns 404 when wrong tenant
+- **WHEN** a contact is read, updated, or deleted by id and belongs to another tenant
+- **THEN** the system SHALL return 404 Not Found
+
+#### Scenario: Create sets current tenant
+- **WHEN** a new contact is created
+- **THEN** tenant_id SHALL be set to current_user.tenant_id
+- **AND** client-provided tenant_id SHALL be ignored
+
+### Requirement: Web routes require session authentication
+
+All contact web routes SHALL require session-based authentication. Mutations SHALL require CSRF. RBAC enforced for create (admin/manager). Tenant scoping preserved.
+
+#### Scenario: Unauthenticated redirects to login
+- **WHEN** an unauthenticated request is made to GET /contacts
+- **THEN** the system SHALL redirect to /login
+
+#### Scenario: Mutations require CSRF
+- **WHEN** a POST creates, updates, or deletes a contact
+- **THEN** the request SHALL include a valid CSRF token or SHALL be rejected with 403
+
+#### Scenario: Create contact RBAC
+- **WHEN** a user attempts to create a contact
+- **THEN** the user role SHALL be admin or manager; sales SHALL receive 403
+
+#### Scenario: Tenant scoping preserved
+- **WHEN** contact web routes are accessed
+- **THEN** tenant scoping SHALL remain in effect

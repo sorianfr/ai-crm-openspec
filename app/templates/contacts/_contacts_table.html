@@ -28,9 +28,11 @@
         {% include "_ui/button.html" %}
       </td>
       <td class="px-4 py-3">
-        {% set url = none %}{% set type = "button" %}{% set label = "Delete" %}{% set style = "danger" %}
-        {% set hx_post = "/contacts/" ~ contact.id ~ "/delete" %}{% set hx_target = "#contact-" ~ contact.id %}{% set hx_swap = "outerHTML" %}{% set hx_confirm = "Delete this contact?" %}
-        {% include "_ui/button.html" %}
+        <form method="post" action="/contacts/{{ contact.id }}/delete" class="inline" hx-post="/contacts/{{ contact.id }}/delete" hx-target="#contact-{{ contact.id }}" hx-swap="outerHTML" hx-confirm="Delete this contact?">
+          {% include "_ui/csrf_input.html" %}
+          {% set url = none %}{% set type = "submit" %}{% set label = "Delete" %}{% set style = "danger" %}
+          {% include "_ui/button.html" %}
+        </form>
       </td>
     </tr>
     {% endfor %}

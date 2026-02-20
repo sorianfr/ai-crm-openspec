@@ -27,8 +27,10 @@ The application reads configuration from environment variables.
   -------------------------  ------------------------------  ------------------
   `APP_ENV`                  development, staging, production  development
   `DATABASE_URL`             SQLAlchemy connection string    SQLite (dev only)
-  `JWT_SECRET`               Secret for JWT signing (auth)   (none; set in prod)
+  `JWT_SECRET`               Secret for JWT signing (API)    (none; set in prod)
   `JWT_EXPIRATION_MINUTES`   Access token lifetime (minutes) 60
+  `SESSION_SECRET`           Secret for session cookie (web) (none; set in prod)
+  `SESSION_MAX_AGE`          Session max age (seconds)       28800 (8h)
   `DEBUG`                    Enable debug mode               false
   --------------------------------------------------------------------------
 

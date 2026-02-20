@@ -4,7 +4,9 @@
     <span class="text-sm text-gray-900 ml-2">{{ activity.description }}</span>
     <span class="text-xs text-gray-500 ml-2">{{ activity.activity_date.strftime('%Y-%m-%d %H:%M') }}</span>
   </div>
-  {% set url = none %}{% set type = "button" %}{% set label = "Delete" %}{% set style = "danger" %}
-  {% set hx_post = "/activities/" ~ activity.id ~ "/delete" %}{% set hx_target = "#activity-" ~ activity.id %}{% set hx_swap = "outerHTML" %}
-  {% include "_ui/button.html" %}
+  <form method="post" action="/activities/{{ activity.id }}/delete" class="inline" hx-post="/activities/{{ activity.id }}/delete" hx-target="#activity-{{ activity.id }}" hx-swap="outerHTML">
+    {% include "_ui/csrf_input.html" %}
+    {% set url = none %}{% set type = "submit" %}{% set label = "Delete" %}{% set style = "danger" %}
+    {% include "_ui/button.html" %}
+  </form>
 </div>

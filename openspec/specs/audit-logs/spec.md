@@ -4,14 +4,24 @@ The system SHALL persist an audit trail of CREATE, UPDATE, and DELETE operations
 
 ## Requirements
 
-### Requirement: Audit log persistence
+### Requirement: Audit log persistence (tenant-scoped)
 
-The system SHALL maintain an audit_logs (or equivalent) persistence layer that stores one record per audited action.
+The system SHALL maintain an audit_logs (or equivalent) persistence layer that stores one record per audited action. Audit_logs SHALL have tenant_id (NOT NULL) and be tenant-scoped.
 
 #### Scenario: Audit log table or equivalent
 - **WHEN** examining the data layer
-- **THEN** an audit log store SHALL exist (e.g. audit_logs table) with at least: identifier, timestamp, user identifier (nullable if action is unauthenticated), action (CREATE/UPDATE/DELETE), entity type (e.g. contact, company), entity id, and optional summary or changed-fields data
+- **THEN** an audit log store SHALL exist (e.g. audit_logs table) with at least: identifier, timestamp, tenant_id (NOT NULL), user identifier (nullable if action is unauthenticated), action (CREATE/UPDATE/DELETE), entity type (e.g. contact, company), entity id, and optional summary or changed-fields data
 - **AND** entries SHALL be persisted via the same database session/engine as the rest of the application
+
+#### Scenario: Audit writes set tenant_id
+- **WHEN** an audit log entry is written
+- **THEN** tenant_id SHALL be set to current_user.tenant_id
+- **AND** audit_logs table SHALL have tenant_id NOT NULL
+
+#### Scenario: Audit reads scoped by tenant
+- **WHEN** audit log entries are queried or listed
+- **THEN** queries SHALL filter by tenant_id = current_user.tenant_id
+- **AND** SHALL NOT return other tenants' entries
 
 #### Scenario: Audit entry created on entity create
 - **WHEN** a core entity (e.g. Contact or Company) is created and the transaction is committed

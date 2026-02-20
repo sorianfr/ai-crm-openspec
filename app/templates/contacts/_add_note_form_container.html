@@ -7,6 +7,7 @@
   </ul>
   {% endif %}
   <form hx-post="/contacts/{{ contact.id }}/notes" hx-target="#contact-notes-list" hx-swap="beforeend">
+    {% include "_ui/csrf_input.html" %}
     {% set name = "content" %}{% set id = "note_content" %}{% set label = "Note" %}{% set type = "textarea" %}{% set value = form_content|default('', true) %}{% set required = false %}
     {% include "_ui/form_field.html" %}
     {% set name = none %}{% set url = none %}{% set type = "submit" %}{% set label = "Add note" %}{% set style = "primary" %}

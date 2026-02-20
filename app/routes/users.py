@@ -32,6 +32,7 @@ def create_user(
             detail="A user with this email already exists",
         )
     user = User(
+        tenant_id=current_user.tenant_id,
         email=body.email.strip().lower(),
         password_hash=hash_password(body.password),
         role=body.role,
@@ -43,6 +44,7 @@ def create_user(
         action="CREATE",
         entity_type="User",
         entity_id=user.id,
+        tenant_id=current_user.tenant_id,
         user_id=current_user.id,
         summary="user created",
     )
@@ -56,8 +58,16 @@ def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["admin"])),
 ) -> list[UserResponse]:
-    """List all users (admin only). Response excludes password/password_hash."""
-    users = db.execute(select(User).order_by(User.id.asc())).scalars().all()
+    """List users in current tenant (admin only). Response excludes password/password_hash."""
+    users = (
+        db.execute(
+            select(User)
+            .where(User.tenant_id == current_user.tenant_id)
+            .order_by(User.id.asc())
+        )
+        .scalars()
+        .all()
+    )
     return [UserResponse.model_validate(u) for u in users]
 
 
@@ -68,8 +78,17 @@ def update_user_role(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["admin"])),
 ) -> UserResponse:
-    """Update a user's role (admin only). Returns 404 if user not found."""
-    user = db.get(User, user_id)
+    """Update a user's role (admin only). Returns 404 if user not found or wrong tenant."""
+    user = (
+        db.execute(
+            select(User).where(
+                User.id == user_id,
+                User.tenant_id == current_user.tenant_id,
+            ).limit(1)
+        )
+        .scalars()
+        .first()
+    )
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -81,6 +100,7 @@ def update_user_role(
         action="UPDATE",
         entity_type="User",
         entity_id=user_id,
+        tenant_id=current_user.tenant_id,
         user_id=current_user.id,
         summary=f"role changed to {body.role}",
     )

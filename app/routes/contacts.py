@@ -9,8 +9,9 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.audit import log_audit
-from app.core.auth import require_roles
+from app.core.csrf import validate_csrf_or_403
 from app.core.templates import templates
+from app.core.web_auth import get_current_web_user, require_web_roles
 from app.db.session import get_db
 from app.models import Activity, Company, Contact, Note, User
 from app.schemas.activity import ActivityFormSchema
@@ -20,17 +21,35 @@ from app.schemas.note import NoteFormSchema
 router = APIRouter()
 
 
-def _get_contact_or_404(db: Session, contact_id: int) -> Contact | None:
-    return db.get(Contact, contact_id)
+def _get_contact_or_404(db: Session, contact_id: int, tenant_id: int) -> Contact | None:
+    """Return contact if found and belongs to tenant, else None (caller returns 404)."""
+    return (
+        db.execute(
+            select(Contact).where(
+                Contact.id == contact_id,
+                Contact.tenant_id == tenant_id,
+            )
+        )
+        .scalars()
+        .unique()
+        .one_or_none()
+    )
 
 
-def _list_companies(db: Session) -> list[Company]:
-    return db.execute(select(Company).order_by(Company.name.asc())).scalars().all()
+def _list_companies(db: Session, tenant_id: int) -> list[Company]:
+    return (
+        db.execute(
+            select(Company).where(Company.tenant_id == tenant_id).order_by(Company.name.asc())
+        )
+        .scalars()
+        .all()
+    )
 
 
 def _resolve_company_id(
     db: Session,
     company_id_raw: str | None,
+    tenant_id: int,
 ) -> tuple[int | None, str | None]:
     if company_id_raw is None or company_id_raw.strip() == "":
         return None, None
@@ -39,7 +58,16 @@ def _resolve_company_id(
     except ValueError:
         return None, "Selected company is invalid"
 
-    company = db.get(Company, company_id)
+    company = (
+        db.execute(
+            select(Company).where(
+                Company.id == company_id,
+                Company.tenant_id == tenant_id,
+            ).limit(1)
+        )
+        .scalars()
+        .first()
+    )
     if company is None:
         return None, "Selected company is invalid"
     return company_id, None
@@ -48,19 +76,25 @@ def _resolve_company_id(
 def _resolve_or_create_company(
     db: Session,
     name: str | None,
+    tenant_id: int,
 ) -> tuple[Company | None, str | None]:
-    """Resolve company by name (case-insensitive) or create. Returns (Company, None) or (None, error)."""
+    """Resolve company by name (case-insensitive) in tenant or create in tenant. Returns (Company, None) or (None, error)."""
     normalized = (name or "").strip()
     if not normalized:
         return None, "Company name is required"
     existing = (
-        db.execute(select(Company).where(Company.name.ilike(normalized)).limit(1))
+        db.execute(
+            select(Company).where(
+                Company.name.ilike(normalized),
+                Company.tenant_id == tenant_id,
+            ).limit(1)
+        )
         .scalars()
         .first()
     )
     if existing is not None:
         return existing, None
-    company = Company(name=normalized)
+    company = Company(tenant_id=tenant_id, name=normalized)
     db.add(company)
     db.flush()
     return company, None
@@ -73,8 +107,13 @@ def list_contacts(
     has_email: bool = Query(default=False),
     has_phone: bool = Query(default=False),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
 ) -> HTMLResponse:
-    stmt = select(Contact).options(selectinload(Contact.company_ref))
+    stmt = (
+        select(Contact)
+        .where(Contact.tenant_id == current_user.tenant_id)
+        .options(selectinload(Contact.company_ref))
+    )
 
     q = q.strip()
     if q:
@@ -116,6 +155,7 @@ def list_contacts(
 def new_contact(
     request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
         "contacts/new.html",
@@ -123,7 +163,7 @@ def new_contact(
             "request": request,
             "contact": None,
             "errors": [],
-            "companies": _list_companies(db),
+            "companies": _list_companies(db, current_user.tenant_id),
         },
     )
 
@@ -133,11 +173,15 @@ def contact_detail(
     request: Request,
     contact_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
 ) -> HTMLResponse:
     contact = (
         db.execute(
             select(Contact)
-            .where(Contact.id == contact_id)
+            .where(
+                Contact.id == contact_id,
+                Contact.tenant_id == current_user.tenant_id,
+            )
             .options(selectinload(Contact.company_ref))
         )
         .unique()
@@ -147,16 +191,20 @@ def contact_detail(
         raise HTTPException(status_code=404, detail="Contact not found")
     notes = (
         db.execute(
-            select(Note).where(Note.contact_id == contact_id).order_by(Note.created_at.desc())
+            select(Note).where(
+                Note.contact_id == contact_id,
+                Note.tenant_id == current_user.tenant_id,
+            ).order_by(Note.created_at.desc())
         )
         .scalars()
         .all()
     )
     activities = (
         db.execute(
-            select(Activity)
-            .where(Activity.contact_id == contact_id)
-            .order_by(Activity.activity_date.desc())
+            select(Activity).where(
+                Activity.contact_id == contact_id,
+                Activity.tenant_id == current_user.tenant_id,
+            ).order_by(Activity.activity_date.desc())
         )
         .scalars()
         .all()
@@ -176,13 +224,15 @@ def contact_detail(
 def create_contact(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["admin", "manager"])),
+    current_user: User = Depends(require_web_roles(["admin", "manager"])),
     full_name: str = Form(""),
     email: str | None = Form(None),
     phone: str | None = Form(None),
     company: str | None = Form(None),
     company_id: str | None = Form(None),
+    csrf_token: str | None = Form(None),
 ) -> Response:
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
     try:
         data = ContactFormSchema(
             full_name=full_name.strip(),
@@ -203,13 +253,15 @@ def create_contact(
                 "form_phone": phone or "",
                 "form_company": company or "",
                 "form_company_id": company_id or "",
-                "companies": _list_companies(db),
+                "companies": _list_companies(db, current_user.tenant_id),
             },
             status_code=200,
         )
     company_text = (company or "").strip()
     if company_text:
-        resolved_company, resolve_error = _resolve_or_create_company(db, company_text)
+        resolved_company, resolve_error = _resolve_or_create_company(
+            db, company_text, current_user.tenant_id
+        )
         if resolve_error:
             return templates.TemplateResponse(
                 "contacts/new.html",
@@ -222,14 +274,16 @@ def create_contact(
                     "form_phone": phone or "",
                     "form_company": company or "",
                     "form_company_id": company_id or "",
-                    "companies": _list_companies(db),
+                    "companies": _list_companies(db, current_user.tenant_id),
                 },
                 status_code=200,
             )
         selected_company_id = resolved_company.id
         company_display_name = resolved_company.name
     else:
-        selected_company_id, company_id_error = _resolve_company_id(db, company_id)
+        selected_company_id, company_id_error = _resolve_company_id(
+            db, company_id, current_user.tenant_id
+        )
         if company_id_error:
             return templates.TemplateResponse(
                 "contacts/new.html",
@@ -242,15 +296,25 @@ def create_contact(
                     "form_phone": phone or "",
                     "form_company": company or "",
                     "form_company_id": company_id or "",
-                    "companies": _list_companies(db),
+                    "companies": _list_companies(db, current_user.tenant_id),
                 },
                 status_code=200,
             )
         company_display_name = None
         if selected_company_id is not None:
-            c = db.get(Company, selected_company_id)
+            c = (
+                db.execute(
+                    select(Company).where(
+                        Company.id == selected_company_id,
+                        Company.tenant_id == current_user.tenant_id,
+                    ).limit(1)
+                )
+                .scalars()
+                .first()
+            )
             company_display_name = c.name if c else None
     contact = Contact(
+        tenant_id=current_user.tenant_id,
         full_name=data.full_name,
         email=data.email,
         phone=data.phone,
@@ -259,7 +323,14 @@ def create_contact(
     )
     db.add(contact)
     db.flush()
-    log_audit(db, "CREATE", "contact", contact.id, user_id=current_user.id)
+    log_audit(
+        db,
+        "CREATE",
+        "contact",
+        contact.id,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+    )
     db.commit()
     db.refresh(contact)
     return RedirectResponse(url="/contacts", status_code=303)
@@ -270,11 +341,15 @@ def edit_contact(
     request: Request,
     contact_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
 ) -> HTMLResponse:
     contact = (
         db.execute(
             select(Contact)
-            .where(Contact.id == contact_id)
+            .where(
+                Contact.id == contact_id,
+                Contact.tenant_id == current_user.tenant_id,
+            )
             .options(selectinload(Contact.company_ref))
         )
         .unique()
@@ -288,7 +363,7 @@ def edit_contact(
             "request": request,
             "contact": contact,
             "errors": [],
-            "companies": _list_companies(db),
+            "companies": _list_companies(db, current_user.tenant_id),
         },
     )
 
@@ -298,13 +373,16 @@ def update_contact(
     request: Request,
     contact_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
     full_name: str = Form(""),
     email: str | None = Form(None),
     phone: str | None = Form(None),
     company: str | None = Form(None),
     company_id: str | None = Form(None),
+    csrf_token: str | None = Form(None),
 ) -> Response:
-    contact = _get_contact_or_404(db, contact_id)
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
+    contact = _get_contact_or_404(db, contact_id, current_user.tenant_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     try:
@@ -327,13 +405,15 @@ def update_contact(
                 "form_phone": phone or "",
                 "form_company": company or "",
                 "form_company_id": company_id or "",
-                "companies": _list_companies(db),
+                "companies": _list_companies(db, current_user.tenant_id),
             },
             status_code=200,
         )
     company_text = (company or "").strip()
     if company_text:
-        resolved_company, resolve_error = _resolve_or_create_company(db, company_text)
+        resolved_company, resolve_error = _resolve_or_create_company(
+            db, company_text, current_user.tenant_id
+        )
         if resolve_error:
             return templates.TemplateResponse(
                 "contacts/edit.html",
@@ -346,14 +426,16 @@ def update_contact(
                     "form_phone": phone or "",
                     "form_company": company or "",
                     "form_company_id": company_id or "",
-                    "companies": _list_companies(db),
+                    "companies": _list_companies(db, current_user.tenant_id),
                 },
                 status_code=200,
             )
         selected_company_id = resolved_company.id
         company_display_name = resolved_company.name
     else:
-        selected_company_id, company_id_error = _resolve_company_id(db, company_id)
+        selected_company_id, company_id_error = _resolve_company_id(
+            db, company_id, current_user.tenant_id
+        )
         if company_id_error:
             return templates.TemplateResponse(
                 "contacts/edit.html",
@@ -366,13 +448,22 @@ def update_contact(
                     "form_phone": phone or "",
                     "form_company": company or "",
                     "form_company_id": company_id or "",
-                    "companies": _list_companies(db),
+                    "companies": _list_companies(db, current_user.tenant_id),
                 },
                 status_code=200,
             )
         company_display_name = None
         if selected_company_id is not None:
-            c = db.get(Company, selected_company_id)
+            c = (
+                db.execute(
+                    select(Company).where(
+                        Company.id == selected_company_id,
+                        Company.tenant_id == current_user.tenant_id,
+                    ).limit(1)
+                )
+                .scalars()
+                .first()
+            )
             company_display_name = c.name if c else None
     contact.full_name = data.full_name
     contact.email = data.email
@@ -380,7 +471,14 @@ def update_contact(
     contact.company = company_display_name if company_display_name is not None else data.company
     contact.company_id = selected_company_id
     contact.updated_at = datetime.utcnow()
-    log_audit(db, "UPDATE", "contact", contact_id, user_id=None)
+    log_audit(
+        db,
+        "UPDATE",
+        "contact",
+        contact_id,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+    )
     db.commit()
     db.refresh(contact)
     return RedirectResponse(url="/contacts", status_code=303)
@@ -391,9 +489,12 @@ def create_note(
     request: Request,
     contact_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
     content: str = Form(""),
+    csrf_token: str | None = Form(None),
 ) -> Response:
-    contact = _get_contact_or_404(db, contact_id)
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
+    contact = _get_contact_or_404(db, contact_id, current_user.tenant_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     try:
@@ -412,7 +513,11 @@ def create_note(
         fragment.headers["HX-Retarget"] = "#add-note-form-container"
         fragment.headers["HX-Reswap"] = "outerHTML"
         return fragment
-    note = Note(contact_id=contact_id, content=data.content)
+    note = Note(
+        tenant_id=current_user.tenant_id,
+        contact_id=contact_id,
+        content=data.content,
+    )
     db.add(note)
     db.commit()
     db.refresh(note)
@@ -428,11 +533,14 @@ def create_activity(
     request: Request,
     contact_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
     type: str = Form(""),
     description: str = Form(""),
     activity_date: str = Form(""),
+    csrf_token: str | None = Form(None),
 ) -> Response:
-    contact = _get_contact_or_404(db, contact_id)
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
+    contact = _get_contact_or_404(db, contact_id, current_user.tenant_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     try:
@@ -458,6 +566,7 @@ def create_activity(
         fragment.headers["HX-Reswap"] = "outerHTML"
         return fragment
     activity = Activity(
+        tenant_id=current_user.tenant_id,
         contact_id=contact_id,
         type=data.type,
         description=data.description,
@@ -475,10 +584,23 @@ def create_activity(
 
 @router.post("/activities/{activity_id:int}/delete")
 def delete_activity(
+    request: Request,
     activity_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
+    csrf_token: str | None = Form(None),
 ) -> HTMLResponse:
-    activity = db.get(Activity, activity_id)
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
+    activity = (
+        db.execute(
+            select(Activity).where(
+                Activity.id == activity_id,
+                Activity.tenant_id == current_user.tenant_id,
+            ).limit(1)
+        )
+        .scalars()
+        .first()
+    )
     if activity is None:
         raise HTTPException(status_code=404, detail="Activity not found")
     db.delete(activity)
@@ -488,10 +610,23 @@ def delete_activity(
 
 @router.post("/notes/{note_id:int}/delete")
 def delete_note(
+    request: Request,
     note_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
+    csrf_token: str | None = Form(None),
 ) -> HTMLResponse:
-    note = db.get(Note, note_id)
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
+    note = (
+        db.execute(
+            select(Note).where(
+                Note.id == note_id,
+                Note.tenant_id == current_user.tenant_id,
+            ).limit(1)
+        )
+        .scalars()
+        .first()
+    )
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
     db.delete(note)
@@ -501,13 +636,24 @@ def delete_note(
 
 @router.post("/contacts/{contact_id:int}/delete")
 def delete_contact(
+    request: Request,
     contact_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_web_user),
+    csrf_token: str | None = Form(None),
 ):
-    contact = _get_contact_or_404(db, contact_id)
+    validate_csrf_or_403(request, csrf_token or request.headers.get("X-CSRF-Token"))
+    contact = _get_contact_or_404(db, contact_id, current_user.tenant_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
-    log_audit(db, "DELETE", "contact", contact_id, user_id=None)
+    log_audit(
+        db,
+        "DELETE",
+        "contact",
+        contact_id,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+    )
     db.delete(contact)
     db.commit()
     return HTMLResponse(content="", status_code=200)

@@ -81,3 +81,43 @@ The system SHALL return 404 Not Found when a contact id or note id is used in a 
 #### Scenario: 404 for delete note
 - **WHEN** POST `/notes/{note_id}/delete` is requested and the note does not exist
 - **THEN** the response SHALL be 404 Not Found
+
+### Requirement: Notes are tenant-scoped
+
+Notes SHALL have tenant_id and SHALL only be accessible when they match the current user's tenant. Creating a note under a contact SHALL enforce that the contact belongs to the current tenant; otherwise the system SHALL return 404.
+
+#### Scenario: Note has tenant_id and matches current tenant
+- **WHEN** a note is created, read, updated, or deleted
+- **THEN** the note SHALL have tenant_id set to current_user.tenant_id (on create)
+- **AND** reads/updates/deletes SHALL resolve the note (and contact if applicable) within the current tenant
+- **AND** cross-tenant access SHALL return 404
+
+#### Scenario: Create note under contact enforces same tenant
+- **WHEN** a note is created under a contact (e.g. POST /contacts/{id}/notes)
+- **THEN** the system SHALL verify the contact exists and has tenant_id = current_user.tenant_id
+- **AND** if the contact does not exist or belongs to another tenant SHALL return 404
+- **AND** the new note SHALL have tenant_id = current_user.tenant_id
+
+#### Scenario: List and delete notes scoped by tenant
+- **WHEN** notes are listed for a contact or a note is deleted by id
+- **THEN** the contact (if used) SHALL be resolved within the current tenant
+- **AND** the note SHALL be resolved within the current tenant
+- **AND** SHALL NOT return or modify notes belonging to other tenants
+
+### Requirement: Web routes require session authentication and CSRF
+
+All note web routes (create, delete) SHALL require session authentication and CSRF validation on mutations.
+
+#### Scenario: Unauthenticated access redirects to login
+- **WHEN** an unauthenticated request is made to a note web route
+- **THEN** the system SHALL redirect to /login
+- **AND** SHALL NOT create or delete notes
+
+#### Scenario: Mutations require CSRF
+- **WHEN** a POST request creates or deletes a note
+- **THEN** the request SHALL include a valid CSRF token
+- **AND** SHALL be rejected with 403 if the token is missing or invalid
+
+#### Scenario: Tenant scoping preserved
+- **WHEN** note web routes are accessed by an authenticated user
+- **THEN** tenant scoping SHALL remain in effect (notes created under contacts in current tenant; cross-tenant access returns 404)

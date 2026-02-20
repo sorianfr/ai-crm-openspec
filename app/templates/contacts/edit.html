@@ -15,6 +15,7 @@
 
 {% call card() %}
 <form method="post" action="/contacts/{{ contact.id }}">
+  {% include "_ui/csrf_input.html" %}
   {% set name = "full_name" %}{% set label = "Full name" %}{% set type = "text" %}{% set value = form_full_name | default(contact.full_name, true) %}{% set required = true %}
   {% include "_ui/form_field.html" %}
   {% set name = "email" %}{% set label = "Email" %}{% set type = "email" %}{% set value = form_email | default(contact.email or '', true) %}{% set required = false %}

@@ -15,6 +15,7 @@
 
 {% call card() %}
 <form method="post" action="/companies/{{ company.id }}">
+  {% include "_ui/csrf_input.html" %}
   {% set name = "name" %}{% set label = "Name" %}{% set type = "text" %}{% set value = form_name | default(company.name, true) %}{% set required = true %}
   {% include "_ui/form_field.html" %}
   <div class="flex gap-2">

@@ -9,10 +9,16 @@
 </head>
 <body class="bg-gray-50 text-gray-900">
     <nav class="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
-        <div class="max-w-4xl mx-auto flex gap-4">
+        <div class="max-w-4xl mx-auto flex gap-4 items-center">
             <a href="/" class="text-gray-600 hover:text-gray-900">Home</a>
             <a href="/contacts" class="text-gray-600 hover:text-gray-900">Contacts</a>
             <a href="/companies" class="text-gray-600 hover:text-gray-900">Companies</a>
+            {% if request.session.get("user_id") %}
+            <form method="post" action="/logout" class="ml-auto">
+              {% include "_ui/csrf_input.html" %}
+              <button type="submit" class="text-gray-600 hover:text-gray-900">Log out</button>
+            </form>
+            {% endif %}
         </div>
     </nav>
     <main class="max-w-4xl mx-auto px-4 py-6">

@@ -103,3 +103,36 @@ The system SHALL enforce an optional foreign key from `contacts.company_id` to `
 - **WHEN** a referenced company row is deleted
 - **THEN** the database SHALL set referencing `contacts.company_id` values to NULL
 - **AND** the delete operation SHALL NOT be rejected because of those references
+
+### Requirement: Companies are tenant-scoped
+
+All company list, query, and mutations SHALL be scoped by current_user.tenant_id. Cross-tenant access by id SHALL return 404. New companies SHALL be created with current tenant.
+
+#### Scenario: List filtered by tenant
+- **WHEN** companies are listed
+- **THEN** the query SHALL filter by tenant_id = current_user.tenant_id
+
+#### Scenario: Read/update/delete by id returns 404 when wrong tenant
+- **WHEN** a company is read, updated, or deleted by id and belongs to another tenant
+- **THEN** the system SHALL return 404 Not Found
+
+#### Scenario: Create sets current tenant
+- **WHEN** a new company is created
+- **THEN** tenant_id SHALL be set to current_user.tenant_id
+- **AND** client-provided tenant_id SHALL be ignored
+
+### Requirement: Web routes require session authentication
+
+All company web routes SHALL require session-based authentication. Mutations SHALL require CSRF. Tenant scoping preserved.
+
+#### Scenario: Unauthenticated redirects to login
+- **WHEN** an unauthenticated request is made to GET /companies
+- **THEN** the system SHALL redirect to /login
+
+#### Scenario: Mutations require CSRF
+- **WHEN** a POST creates, updates, or deletes a company
+- **THEN** the request SHALL include a valid CSRF token or SHALL be rejected with 403
+
+#### Scenario: Tenant scoping preserved
+- **WHEN** company web routes are accessed
+- **THEN** tenant scoping SHALL remain in effect

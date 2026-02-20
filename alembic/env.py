@@ -14,7 +14,7 @@ from alembic import context
 
 from app.core.config import DATABASE_URL
 from app.db.base import Base
-from app.models import AuditLog, Company, Contact, Note, User  # noqa: F401 - ensure tables in metadata for autogenerate
+from app.models import AuditLog, Company, Contact, Note, Tenant, User  # noqa: F401 - ensure tables in metadata for autogenerate
 
 config = context.config
 if config.config_file_name is not None:
@@ -34,6 +34,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=url.startswith("sqlite"),
     )
 
     with context.begin_transaction():
@@ -48,6 +49,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            render_as_batch=connection.dialect.name == "sqlite",
         )
 
         with context.begin_transaction():

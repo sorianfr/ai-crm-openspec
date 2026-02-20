@@ -33,5 +33,21 @@ JWT_SECRET: str = os.getenv("JWT_SECRET", "")
 JWT_EXPIRATION_MINUTES: int = int(os.getenv("JWT_EXPIRATION_MINUTES", "60"))
 JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
 
+# Session (web UI cookie auth; required in production)
+def _get_session_secret() -> str:
+    secret = os.getenv("SESSION_SECRET", "").strip()
+    if APP_ENV == "production":
+        if not secret:
+            raise RuntimeError(
+                "SESSION_SECRET must be set when APP_ENV=production. "
+                "Set the environment variable before starting the application."
+            )
+        return secret
+    return secret or "dev-session-secret-change-in-production"
+
+
+SESSION_SECRET: str = _get_session_secret()
+SESSION_MAX_AGE: int = int(os.getenv("SESSION_MAX_AGE", "28800"))  # 8 hours default
+
 # Project root (for resolving paths relative to project)
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent

@@ -3,7 +3,9 @@
     <span class="text-sm text-gray-900">{{ note.content }}</span>
     <span class="text-xs text-gray-500 ml-2">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
   </div>
-  {% set url = none %}{% set type = "button" %}{% set label = "Delete" %}{% set style = "danger" %}
-  {% set hx_post = "/notes/" ~ note.id ~ "/delete" %}{% set hx_target = "#note-" ~ note.id %}{% set hx_swap = "outerHTML" %}
-  {% include "_ui/button.html" %}
+  <form method="post" action="/notes/{{ note.id }}/delete" class="inline" hx-post="/notes/{{ note.id }}/delete" hx-target="#note-{{ note.id }}" hx-swap="outerHTML">
+    {% include "_ui/csrf_input.html" %}
+    {% set url = none %}{% set type = "submit" %}{% set label = "Delete" %}{% set style = "danger" %}
+    {% include "_ui/button.html" %}
+  </form>
 </div>
