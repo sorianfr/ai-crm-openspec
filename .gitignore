@@ -1,5 +1,6 @@
 # Environment
 .env
+.env.prod
 .venv
 venv
 env/
@@ -14,6 +15,11 @@ __pycache__/
 .eggs/
 *.egg-info/
 *.egg
+
+# Traefik local certs (do not commit private keys)
+docker/traefik/certs/*.crt
+docker/traefik/certs/*.key
+!docker/traefik/certs/.gitkeep
 
 # Database
 *.db

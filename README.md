@@ -93,6 +93,29 @@ alembic/ → Database migrations requirements.txt → Python dependencies
 
 ------------------------------------------------------------------------
 
+## Docker (dev and prod)
+
+Use separate Compose files for development and production. The app container runs migrations on start (no manual alembic upgrade head).
+
+**Development** (ports 8000 and 5432 exposed, .env.dev):
+
+    docker compose -f docker-compose.dev.yml up --build
+
+**Production** (no Postgres port published; requires .env.prod from .env.prod.example):
+
+    cp .env.prod.example .env.prod
+    # Edit .env.prod and set JWT_SECRET, SESSION_SECRET, and DATABASE_URL
+    docker compose -f docker-compose.prod.yml up -d --build
+
+**Local HTTPS (production)** (Traefik reverse proxy, self-signed cert, Secure cookies):
+
+1. Add host entry: `127.0.0.1 crm.local` to `/etc/hosts`
+2. Generate self-signed certs: `./scripts/generate-local-certs.sh`
+3. Create .env.prod and run: `docker compose -f docker-compose.prod.yml up -d --build`
+4. Open https://crm.local/login (accept browser warning for self-signed cert)
+
+------------------------------------------------------------------------
+
 ## Deployment Notes
 
 -   SQLite is used automatically in development if `DATABASE_URL` is not

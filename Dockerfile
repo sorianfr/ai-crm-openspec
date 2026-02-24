@@ -3,6 +3,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install pg_isready for entrypoint wait (then remove apt cache)
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -11,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini .
+COPY docker/entrypoint.sh /app/docker/entrypoint.sh
+COPY scripts ./scripts
+RUN chmod +x /app/docker/entrypoint.sh
 
 # Non-root user (UID 1000)
 RUN adduser --disabled-password --gecos "" --uid 1000 appuser \
@@ -20,5 +27,5 @@ USER appuser
 
 EXPOSE 8000
 
-# 12-factor: APP_ENV, DATABASE_URL, DEBUG from environment
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Entrypoint: wait for DB, run migrations, then start uvicorn
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

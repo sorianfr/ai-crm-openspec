@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16
-    container_name: crm-postgres
+    container_name: crm-postgres-dev
     environment:
       POSTGRES_USER: crm
       POSTGRES_PASSWORD: crm
@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - crm_pgdata:/var/lib/postgresql/data
+      - crm_pgdata_dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
       interval: 5s
@@ -20,14 +20,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: crm-app
+    container_name: crm-app-dev
+    env_file: .env.dev
     environment:
       APP_ENV: development
       DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://crm:crm@db:5432/crm
-      JWT_SECRET: "dev-jwt-secret-change-me"
-      SESSION_SECRET: "dev-session-secret-change-me"
-      JWT_EXPIRATION_MINUTES: "60"
+      DB_HOST: db
+      DB_USER: crm
+      DB_NAME: crm
     depends_on:
       db:
         condition: service_healthy
@@ -35,4 +35,4 @@ services:
       - "8000:8000"
 
 volumes:
-  crm_pgdata:
+  crm_pgdata_dev:
