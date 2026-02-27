@@ -1,0 +1,17 @@
+# Env keys from docker-compose.prod (app.environment + non-secret from .env.prod)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crm-app-config
+  namespace: crm
+  labels:
+    app.kubernetes.io/name: crm
+data:
+  APP_ENV: "production"
+  DEBUG: "false"
+  DB_HOST: "postgres"
+  DB_USER: "crm"
+  DB_NAME: "crm"
+  JWT_EXPIRATION_MINUTES: "60"
+  JWT_ALGORITHM: "HS256"
+  SESSION_MAX_AGE: "28800"
